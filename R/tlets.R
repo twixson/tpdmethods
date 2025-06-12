@@ -1,3 +1,6 @@
+
+# This function estimates TLETS-MA(q) coefficients using the extremes-analogue
+#   to the innovations algorithm for model of order q = 1, ..., max_q.
 innovations <- function(tpdf, max_q =50){
   #initialize variables nu and theta_hat
   nu <- rep(NA, max_q + 1)
@@ -23,21 +26,24 @@ innovations <- function(tpdf, max_q =50){
 }
 
 
+# This function transforms the marginal distribution of a dataset. It is used on
+#   one margin at a time. It uses a GPD above a quantile q and the ECDF below.
 transform_marginal <- function(x, q = 0.975){
   quant_q <- unname(quantile(prob = q, x))
   large_x <- which(x >= quant_q)
-  params  <- fpot(x, threshold = quant_q, shape = 1/2, std.err = F)$estimate
+  params  <- evd::fpot(x, threshold = quant_q, shape = 1/2, std.err = F)$estimate
   x_new   <- ecdf(x)(x)
   for(i in 1:length(x)){
     if(i %in% large_x){
-      x_new[i] <- q + (1-q)*pgpd(x[i], shape = 1/2, loc = quant_q, scale = params)
+      x_new[i] <- q + (1-q)*evd::pgpd(x[i], shape = 1/2, loc = quant_q, scale = params)
     }
   }
 
-  return(qfrechet(x_new, shape = 2))
+  return(evd::qfrechet(x_new, shape = 2))
 }
 
 
+# This function generates a TLETS-AR(1) time series of length n.
 gen_ar1 <- function(n, phi){
   RVnoise   <- rfrechet(1000+n, shape = 2)
   ar1_ts    <- numeric(1000 + n)
@@ -50,6 +56,7 @@ gen_ar1 <- function(n, phi){
 }
 
 
+# This function generates a TLETS-ARMA(1,1) time series of length n.
 gen_arma11 <- function(n, phi, theta){
   RVnoise   <- rfrechet(1000+n, shape = 2)
   arma11_ts    <- numeric(1000 + n)
@@ -64,6 +71,7 @@ gen_arma11 <- function(n, phi, theta){
 }
 
 
+# This function generates a TLETS-MA(q) time series of length n.
 gen_maq <- function(n, thetas){
   q         <- length(thetas)
   RVnoise   <- rfrechet(q+n+1, shape = 2)
