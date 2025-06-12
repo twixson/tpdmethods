@@ -1,6 +1,30 @@
 
-# This function estimates TLETS-MA(q) coefficients using the extremes-analogue
-#   to the innovations algorithm for model of order q = 1, ..., max_q.
+#' Extremal analogue to the innovations algorithm
+#'
+#' This function estimates TLETS-MA(q) coefficients using the extremes-analogue
+#'    to the innovations algorithm for model of order q = 1, ..., max_q. The
+#'    user inputs the estimated (or known) TPDF values and chooses a maximum
+#'    order to fit with the recursive algorithm.
+#'
+#' @param tpdf a `vector` of tpdf values where the first value in the vector is
+#'    the lag-0 tpd value.
+#' @param max_q the largest order MA(q) that you want to fit. This could be your
+#'    desired order or some other large value to see when the estimates
+#'    stabilize.
+#'
+#' @returns a `list` with two components. The first component `out[[1]]`  is a
+#'    `matrix` of innovations-estimated coefficients. The `n`th row contains
+#'    coefficients for the TLETS-MA(`n`). The second component `out[[2]]` is a
+#'    vector of `nu` values from the innovations algorith.
+#' @export
+#'
+#' @importFrom Rdpack reprompt
+#' @references
+#' \insertRef{mhatre2023innov}{tpdmethods}
+#'
+#' @examples
+#' myTPD <- c(1, 0.4, 0.34, 0.2, 0.11, 0.05, 0.01)
+#' out <- innovations(myTPD, max_q = 5)
 innovations <- function(tpdf, max_q =50){
   #initialize variables nu and theta_hat
   nu <- rep(NA, max_q + 1)
@@ -26,8 +50,23 @@ innovations <- function(tpdf, max_q =50){
 }
 
 
-# This function transforms the marginal distribution of a dataset. It is used on
-#   one margin at a time. It uses a GPD above a quantile q and the ECDF below.
+
+#' Transform the marginal distribution to be Fr\'echet(2)
+#'
+#' This function transforms the marginal distribution of a dataset. It is used on
+#'    one margin at a time. It uses a GPD above a quantile q and the ECDF below.
+#'
+#' @param x univariate data (`vector`) to be transformed
+#' @param q the quantile to use as a cutoff between the ECDF and GPD components
+#'
+#' @returns a `vector` of data on Fr\'echet(2) margins
+#' @export
+#'
+#' @importFrom stats ecdf quantile
+#'
+#' @examples
+#' myData <- rnorm(1000)
+#' out <- transform_marginal(myData, q = 0.95)
 transform_marginal <- function(x, q = 0.975){
   quant_q <- unname(quantile(prob = q, x))
   large_x <- which(x >= quant_q)
@@ -43,9 +82,23 @@ transform_marginal <- function(x, q = 0.975){
 }
 
 
-# This function generates a TLETS-AR(1) time series of length n.
+#' Generate a TLETS-AR(1) time series
+#'
+#' This function generates a TLETS-AR(1) time series of length `n`.
+#'
+#' @param n the length of the desired time series
+#' @param phi the AR(1) parameter
+#'
+#' @returns a `vector`. The length-`n` times series with AR(1) parameter `phi`.
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- gen_ar1(1000, phi = 0.2)
 gen_ar1 <- function(n, phi){
-  RVnoise   <- rfrechet(1000+n, shape = 2)
+  RVnoise   <- evd::rfrechet(1000+n, shape = 2)
   ar1_ts    <- numeric(1000 + n)
   ar1_ts[1] <- RVnoise[1]
   for(i in 2:(1000+n)){
@@ -56,9 +109,26 @@ gen_ar1 <- function(n, phi){
 }
 
 
-# This function generates a TLETS-ARMA(1,1) time series of length n.
+
+#' Generate a TLETS-ARMA(1, 1) time series
+#'
+#' This function generates a TLETS-ARMA(1,1) time series of length `n`.
+#'
+#' @param n the length of the desired time series
+#' @param phi the AR(1) parameter
+#' @param theta the MA(1) parameter
+#'
+#' @returns a `vector`. The length-`n` times series with AR(1) parameter `phi`
+#'    and MA(1) parameter `theta`.
+#' @export
+#'
+#'@references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- gen_arma11(1000, phi = 0.3, theta = -0.1)
 gen_arma11 <- function(n, phi, theta){
-  RVnoise   <- rfrechet(1000+n, shape = 2)
+  RVnoise   <- evd::rfrechet(1000+n, shape = 2)
   arma11_ts    <- numeric(1000 + n)
   arma11_ts[1] <- RVnoise[1]
   for(i in 2:(1000+n)){
@@ -71,10 +141,26 @@ gen_arma11 <- function(n, phi, theta){
 }
 
 
-# This function generates a TLETS-MA(q) time series of length n.
+#' Generate a TLETS-MA(`q`) time series
+#'
+#' This function generates a TLETS-MA(`q`) time series of length `n` where `q`
+#'    is determined by `length(thetas)`.
+#'
+#' @param n the length of the desired time series
+#' @param thetas the `vector` of MA(`q`) parameters
+#'
+#' @returns a `vector`. The length-`n` times series with MA(`q`) parameters
+#'    `thetas`.
+#' @export
+#'
+#'@references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- gen_maq(n = 1200, thetas = c(0.8, 0.2, 0.3, 0.1))
 gen_maq <- function(n, thetas){
   q         <- length(thetas)
-  RVnoise   <- rfrechet(q+n+1, shape = 2)
+  RVnoise   <- evd::rfrechet(q+n+1, shape = 2)
   maq_ts    <- numeric(n)
   temp_vals <- numeric(q+1)
   for(i in (q+1):(n+q+1)){

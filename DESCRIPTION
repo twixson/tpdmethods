@@ -1,11 +1,20 @@
 Package: tpdmethods
-Title: What the Package Does (One Line, Title Case)
+Title: Implements TPD Based Extremal Analysis Methods
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Troy", "Wixson", , "twixson@rams.colostate.edu", role = c("aut", "cre"))
+Description: Recent work in multivariate extremes is built on the so-called tail 
+    pairwise dependence (TPD). This summary metric of dependence in the pairwise 
+    tail shares properties with covariance and this recent work has used these 
+    properties to construct extremal analogues to classical statistical tools 
+    including PCA and ARMA time series models. We implement these extremal 
+    analysis pipelines in this R package 'tpdmethods'. The package includes 
+    datasets and vignettes for precipitation and fire weather analyses. 
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Imports: 
+    evd,
+    Rdpack
+RdMacros: Rdpack

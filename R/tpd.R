@@ -1,8 +1,48 @@
 
-# this function puts the users input into a form recognizable by simpler
-#   functions which transform the marginal distribution, extract the large
-#   points, and compute the TPD value. It currently recognizes matrices,
-#   vectors as time series, and lists as
+#' Compute the Tail Pairwise Dependence (TPD) of an `R` object
+#'
+#' This function puts the users input into a form recognizable by simpler
+#'    functions which transform the marginal distribution, extract the large
+#'    points, and compute the TPD value. It currently recognizes `matrices`,
+#'    `vectors` as time series, and `lists`.
+#'
+#' @param data as a `matrix`, `vector`, or `list`
+#' @param radial_quantile the quantile cutoff for computing the TPD. Points with
+#'    radial quantiles above this value will be used to estimate the TPD.
+#'    (default is 0.975)
+#' @param max_lag the maximum lag-value to compute the TPD for. Only used with
+#'    `vector` inputs. (default is 50)
+#' @param radial_thresh instead of specifying the `radial_quantile` users can
+#'    specify a threshold such that points with radii larger than the
+#'    `radial_thresh` are included in the TPD estimation. `radial_quantile` is
+#'    ignored if this is greater than zero. (default is 0)
+#' @param get_large change to `FALSE` if you have already removed all small
+#'    points. If `true` the function will remove points below the with radii
+#'    below the `radial_quantile` so that only large points are used in the
+#'    TPD computation. (default is `TRUE`)
+#' @param trans_marginal change to `FALSE` if the margins are already
+#'    Fr\'echet(2). If `TRUE` the function will transform marginal distributions
+#'    to be Fr\'echet(2). (default is `TRUE`)
+#' @param marginal_thresh the quantile to use as a cutoff between the ECDF and
+#'    GPD components in the marginal transformation. (default is 0.975)
+#' @param verbose change to `FALSE` if you do not want to see comments.
+#'    (default is `TRUE`)
+#'
+#' @returns the estimated tpd
+#' @export
+#'
+#' @references
+#' \insertRef{cooley_thibaud_2019}{tpdmethods}
+#'
+#' @examples
+#' myData <- matrix(rnorm(10000), ncol = 2)
+#' out1 <- tpd(myData, radial_quantile = 0.95)
+#'
+#' myMatrix <- matrix(rnorm(10000), ncol = 5)
+#' out2 <- tpd(myMatrix, radial_thresh = 2)
+#'
+#' myVector <- gen_ar1(1000, phi = 0.6)
+#' out3 <- tpd(myVector, trans_marginal = FALSE)
 tpd <- function(data,
                 radial_quantile = 0.975,
                 max_lag = 50,
@@ -86,11 +126,41 @@ tpd <- function(data,
    } else {
      stop("!#!#! Objects in list are different types or sizes !#!#!")
    }
- }
+  }
+  return(tpds)
 }
 
-# This function takes a bivariate matrix as input and estimates the TPD. If
-#   necessary it transforms the marginal and gets the large points first.
+
+
+#' Get the Tail Pairwise Dependence of one pair of variables
+#'
+#' This function takes a bivariate matrix as input and estimates the TPD. If
+#'    necessary it transforms the marginal and gets the large points first.
+#'
+#' @param data a bivariate `matrix`
+#' @param radial_quantile the quantile cutoff for computing the TPD. Points with
+#'    radial quantiles above this value will be used to estimate the TPD.
+#'    (default is 0.975)
+#' @param radial_thresh instead of specifying the `radial_quantile` users can
+#'    specify a threshold such that points with radii larger than the
+#'    `radial_thresh` are included in the TPD estimation. `radial_quantile` is
+#'    ignored if this is greater than zero. (default is 0)
+#' @param get_large change to `FALSE` if you have already removed all small
+#'    points. If `true` the function will remove points below the with radii
+#'    below the `radial_quantile` so that only large points are used in the
+#'    TPD computation. (default is `TRUE`)
+#' @param trans_marginal change to `FALSE` if the margins are already
+#'    Fr\'echet(2). If `TRUE` the function will transform marginal distributions
+#'    to be Fr\'echet(2). (default is `TRUE`)
+#' @param marginal_thresh the quantile to use as a cutoff between the ECDF and
+#'    GPD components in the marginal transformation. (default is 0.975)
+#'
+#' @returns the estimated TPD value
+#' @export
+#'
+#' @examples
+#' myData <- matrix(rnorm(10000), ncol = 2)
+#' out1 <- tpd(myData, radial_quantile = 0.95)
 tpd.once <- function(data,
                      radial_quantile = 0.975,
                      radial_thresh = 0,
@@ -99,7 +169,7 @@ tpd.once <- function(data,
                      marginal_thresh = 0.975){
 
   if(trans_marginal == TRUE){
-    data <- transform_marginal(data, q = marginal_thresh)
+    data <- apply(data, 2, transform_marginal, q = marginal_thresh)
   }
   if(get_large == TRUE){
     data <- tpd.get_large(data, thresh = radial_quantile, r0 = radial_thresh)
@@ -109,13 +179,47 @@ tpd.once <- function(data,
 
 
 # This function estimates the TPD from a bivariate matrix of large RV(2) points.
-tdp.est <- function(data){
+#' Estimate the Tail Pairwise Dependence from large points
+#'
+#' This function estimates the TPD from a bivariate `matrix` of large regularly
+#'    varying (alpha = 2) points.
+#'
+#' @param data a bivariate `matrix` of large RV(2) points.
+#'
+#' @returns the estimated TPD value
+#' @export
+#'
+#' @references
+#' \insertRef{cooley_thibaud_2019}{tpdmethods}
+#'
+#' @examples
+#' myData <- matrix(evd::rfrechet(1000, shape = 2), ncol = 2)
+#' radii <- sqrt(rowSums(myData^2))
+#' largeData <- myData[order(radii)[450:500], ]
+#' out <- tpd.est(largeData)
+tpd.est <- function(data){
   temp_r <- rowSums(data^2)
-  return(2*mean(data[,1]*data[.2]/temp_r))
+  return(2*mean(data[,1]*data[,2]/temp_r))
 }
 
 
-# This function extracts the large points from a bivariate matrix
+#
+#' Get large points from a bivariate `matrix`
+#'
+#' This function extracts the large points from a bivariate `matrix`
+#'
+#' @param data a bivariate `matrix` of points
+#' @param thresh the radial quantile used to distinguish large points from
+#'    points in the bulk of the distribution. (default is 0.975)
+#' @param r0 instead of setting a quantile the user may set a radial value. If
+#'    `r0` is greater than zero the `thresh` is ignored. (default is 0).
+#'
+#' @returns a bivariate `matrix` of large points.
+#' @export
+#'
+#' @examples
+#' myData <- matrix(evd::rfrechet(1000, shape = 2), ncol = 2)
+#' out <- tpd.get_large(myData)
 tpd.get_large <- function(data, thresh = 0.975, r0 = 0){
   radii <- sqrt(rowSums(data^2))
   if(r0 > 0){
@@ -123,7 +227,7 @@ tpd.get_large <- function(data, thresh = 0.975, r0 = 0){
   } else {
     r00 <- sort(radii)[floor(thresh*(length(radii)+1))]
   }
-  return(data[which(rt0 > r00), ]) # return large points
+  return(data[which(radii > r00), ]) # return large points
 }
 
 
