@@ -53,19 +53,25 @@ these data have plausibly iid replicates (each season) and are already on
 Fr\'echet(2) margins we will use `matrix_as_seasons = TRUE` and 
 `trans_marginal = FALSE` in our `tpd()` call. 
 
-```{r 'estimate tpd'}
+```{r 'estimate tpd', fig.height=3, fig.width=7}
 library(tpdmethods)
-
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(fire_weather_present[,15], 
      type = "l",
-     main = "2020 Season FWI on RV Margins")
+     main = "2020 Season FWI on RV Margins", 
+     xlab = "day", 
+     ylab = "FWI")
 
 fw_tpd_present <- tpd(fire_weather_present, 
                       max_lag = 30, 
                       trans_marginal = FALSE, 
                       matrix_as_seasons = TRUE)
 
-plot(0:30, fw_tpd_present, type = "h", ylim = c(0, 1))
+plot(0:30, fw_tpd_present, 
+     type = "h", 
+     ylim = c(0, 1), 
+     xlab = "lag", 
+     ylab = "TPD")
 ```
 
 After estimating the TPD we need to fit a model to the data. We will use the 
@@ -74,10 +80,11 @@ moving average (TL-MA) model up to order `q = 20`. We will visually compare the
 plot of the fitted TPD function to the empirical TPD function to determine which
 model to retain. 
 
-```{r 'fit MAs'}
+```{r 'fit MAs', fig.height=3, fig.width=7}
 set.seed(1982374)
 model_coefs_present <- innovations(fw_tpd_present, max_q = 20)
 
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(0:30, fw_tpd_present, type = "h", ylim = c(0, 1), 
      main = "Present TPDFs", 
      xlab = "lag", 
@@ -98,7 +105,7 @@ continued their analysis with the TL-MA(15).
 
 We will repeat the previous steps with the past-climate data (from 1958-1979). 
 
-```{r, 'past climate'}
+```{r, 'past climate', fig.height=3, fig.width=7}
 fw_tpd_past <- tpd(fire_weather_past, 
                    max_lag = 30, 
                    trans_marginal = FALSE, 
@@ -106,6 +113,7 @@ fw_tpd_past <- tpd(fire_weather_past,
 
 model_coefs_past <- innovations(fw_tpd_past, max_q = 20)
 
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(0:30, fw_tpd_past, type = "h", ylim = c(0, 1), 
      main = "Past TPDFs", 
      xlab = "lag", 
@@ -135,7 +143,7 @@ distribution. This means that we will need to marginally transform the generated
 seasons back to being marginally Fr\'echet(2). To do this we generate 1000 
 seasons all at once and use the ECDF. 
 
-```{r 'generate seasons'}
+```{r 'generate seasons', cache = TRUE}
 set.seed(2389098)
 temp_past <- gen_maq(n = 153*1000, thetas = model_coefs_past[[1]][15,1:15])
 temp_present <- gen_maq(n = 153*1000, 

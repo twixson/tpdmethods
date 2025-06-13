@@ -48,10 +48,12 @@ on Fr'echet(2) margins we will use `matrix_as_seasons = TRUE` and
 
 ``` r
 library(tpdmethods)
-
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(fire_weather_present[,15], 
      type = "l",
-     main = "2020 Season FWI on RV Margins")
+     main = "2020 Season FWI on RV Margins", 
+     xlab = "day", 
+     ylab = "FWI")
 ```
 
 <img src="man/figures/README-estimate tpd-1.png" width="100%" />
@@ -64,7 +66,11 @@ fw_tpd_present <- tpd(fire_weather_present,
                       matrix_as_seasons = TRUE)
 #> [1] "Assuming this is a time series with 20 seasons."
 
-plot(0:30, fw_tpd_present, type = "h", ylim = c(0, 1))
+plot(0:30, fw_tpd_present, 
+     type = "h", 
+     ylim = c(0, 1), 
+     xlab = "lag", 
+     ylab = "TPD")
 ```
 
 <img src="man/figures/README-estimate tpd-2.png" width="100%" />
@@ -79,6 +85,7 @@ empirical TPD function to determine which model to retain.
 set.seed(1982374)
 model_coefs_present <- innovations(fw_tpd_present, max_q = 20)
 
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(0:30, fw_tpd_present, type = "h", ylim = c(0, 1), 
      main = "Present TPDFs", 
      xlab = "lag", 
@@ -112,6 +119,7 @@ fw_tpd_past <- tpd(fire_weather_past,
 
 model_coefs_past <- innovations(fw_tpd_past, max_q = 20)
 
+par(mar = c(4, 4, 2, 1) + 0.1)
 plot(0:30, fw_tpd_past, type = "h", ylim = c(0, 1), 
      main = "Past TPDFs", 
      xlab = "lag", 
