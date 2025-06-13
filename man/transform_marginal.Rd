@@ -4,12 +4,28 @@
 \alias{transform_marginal}
 \title{Transform the marginal distribution to be Fr\'echet(2)}
 \usage{
-transform_marginal(x, q = 0.975)
+transform_marginal(
+  x,
+  q = 0.975,
+  fix_gpd_params = FALSE,
+  gpd_scale = -99,
+  gpd_shape = -99
+)
 }
 \arguments{
 \item{x}{univariate data (\code{vector}) to be transformed}
 
 \item{q}{the quantile to use as a cutoff between the ECDF and GPD components}
+
+\item{fix_gpd_params}{change to \code{TRUE} if you want to fix either the scale
+or the shape of the GPD used to fit the upper tail of the marginal
+distribution. (default is \code{FALSE})}
+
+\item{gpd_scale}{set at your desired scale value. Only used if
+\code{fix_gpd_params = TRUE}. (default is -99)}
+
+\item{gpd_shape}{set at your desired shape value. Only used if
+\code{fix_gpd_params = TRUE}. Note that gpd shape is 1/alpha. (default is -99)}
 }
 \value{
 a \code{vector} of data on Fr\'echet(2) margins

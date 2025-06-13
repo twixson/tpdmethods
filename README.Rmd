@@ -139,9 +139,10 @@ q098 <- stats::quantile(fire_weather_present, probs = 0.98)
 ```
 
 We note that a generated TL-MA(q) time series has an unknown marginal 
-distribution. This means that we will need to marginally transform the generated
+distribution. The shape of the tail is still 2 but the distribution has changed. 
+This means that we will need to marginally transform the generated
 seasons back to being marginally Fr\'echet(2). To do this we generate 1000 
-seasons all at once and use the ECDF. 
+seasons all at once and use the `transform_marginal()` function.  
 
 ```{r 'generate seasons', cache = TRUE}
 set.seed(2389098)
@@ -149,20 +150,15 @@ temp_past <- gen_maq(n = 153*1000, thetas = model_coefs_past[[1]][15,1:15])
 temp_present <- gen_maq(n = 153*1000, 
                         thetas = model_coefs_present[[1]][15,1:15])
 ```
-```{r 'transform margins'}
-ecdf_past    <- ecdf(temp_past)
-ecdf_present <- ecdf(temp_present)
 
-unif_past <- ecdf_past(temp_past)
-unif_past <- unif_past - 0.5*min(unif_past)
-unif_present <- ecdf_present(temp_present)
-unif_present <- unif_present - 0.5*min(unif_present)
+```{r}
+seasons_past <- 
+  matrix(transform_marginal(temp_past, fix_gpd_params = TRUE, gpd_shape = 0.5), 
+         ncol = 1000)
+seasons_present <- 
+  matrix(transform_marginal(temp_present, fix_gpd_params = TRUE, gpd_shape = 0.5), 
+         ncol = 1000)
 
-frechet_past    <- evd::qfrechet(p = unif_past, shape = 2)
-frechet_present <- evd::qfrechet(p = unif_present, shape = 2)
-
-seasons_past <- matrix(frechet_past, ncol = 1000)
-seasons_present <- matrix(frechet_present, ncol = 1000)
 ```
 
 Finally, we count the number of seasons with at least `r count_2020` days above
@@ -183,6 +179,6 @@ result <- data.frame(quantile = 0.98,
 result
 ```
 
-It appears that the dependence may have been slightly stronger under the climate
+It appears that dependence may have been stronger under the climate
 of fifty years ago. That hypothesis would need more careful testing, but now you 
 see some of the TLETS aspects of `tpdmethods`. 
