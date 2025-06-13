@@ -1,7 +1,7 @@
 
 #' Extremal analogue to the innovations algorithm
 #'
-#' This function estimates TLETS-MA(q) coefficients using the extremes-analogue
+#' This function estimates TL-MA(q) coefficients using the extremes-analogue
 #'    to the innovations algorithm for model of order q = 1, ..., max_q. The
 #'    user inputs the estimated (or known) TPDF values and chooses a maximum
 #'    order to fit with the recursive algorithm.
@@ -14,7 +14,7 @@
 #'
 #' @returns a `list` with two components. The first component `out[[1]]`  is a
 #'    `matrix` of innovations-estimated coefficients. The `n`th row contains
-#'    coefficients for the TLETS-MA(`n`). The second component `out[[2]]` is a
+#'    coefficients for the TL-MA(`n`). The second component `out[[2]]` is a
 #'    vector of `nu` values from the innovations algorith.
 #' @export
 #'
@@ -82,9 +82,9 @@ transform_marginal <- function(x, q = 0.975){
 }
 
 
-#' Generate a TLETS-AR(1) time series
+#' Generate a TL-AR(1) time series
 #'
-#' This function generates a TLETS-AR(1) time series of length `n`.
+#' This function generates a TL-AR(1) time series of length `n`.
 #'
 #' @param n the length of the desired time series
 #' @param phi the AR(1) parameter
@@ -110,9 +110,9 @@ gen_ar1 <- function(n, phi){
 
 
 
-#' Generate a TLETS-ARMA(1, 1) time series
+#' Generate a TL-ARMA(1, 1) time series
 #'
-#' This function generates a TLETS-ARMA(1,1) time series of length `n`.
+#' This function generates a TL-ARMA(1,1) time series of length `n`.
 #'
 #' @param n the length of the desired time series
 #' @param phi the AR(1) parameter
@@ -141,9 +141,9 @@ gen_arma11 <- function(n, phi, theta){
 }
 
 
-#' Generate a TLETS-MA(`q`) time series
+#' Generate a TL-MA(`q`) time series
 #'
-#' This function generates a TLETS-MA(`q`) time series of length `n` where `q`
+#' This function generates a TL-MA(`q`) time series of length `n` where `q`
 #'    is determined by `length(thetas)`.
 #'
 #' @param n the length of the desired time series
@@ -163,7 +163,7 @@ gen_maq <- function(n, thetas){
   RVnoise   <- evd::rfrechet(q+n+1, shape = 2)
   maq_ts    <- numeric(n)
   temp_vals <- numeric(q+1)
-  for(i in (q+1):(n+q+1)){
+  for(i in (q+1):(n+q)){
     temp_vals[1] <- RVnoise[i]
     for(j in 1:q){
       temp_vals[j+1] <- tmult(thetas[j], RVnoise[i-j])
@@ -175,4 +175,131 @@ gen_maq <- function(n, thetas){
     maq_ts[i-q] <- temp_val
   }
   transform_marginal(maq_ts)
+}
+
+
+
+#' Compute the TPD function from TL-MA(q) parameters
+#'
+#' This function takes a parameter vector `thetas` as input and returns the
+#'    model TPDF for lags 0 through `max_lag`
+#'
+#' @param thetas the q-`vector` of parameters from a TL-MA(q) model
+#' @param max_lag the TPDF is computed for lags 1 through `max_lag`
+#'    (default is 20)
+#'
+#' @returns a `vector` of model TPDF values
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- maq_tpdf(c(0.8, 0.4, 0.01), max_lag = 5)
+maq_tpdf <- function(thetas, max_lag = 20){
+  q <- length(thetas)
+  sigmas <- rep(0, max_lag)
+  thetas <- c(1, thetas, rep(0, max_lag))
+  for(i in 1:q){
+    sigmas[i] <- sum(pmax(thetas[1:(q+1)], rep(0, q+1)) *
+                       pmax(thetas[(i+1):(i+q+1)], rep(0, q+1))) /
+      sum(thetas^2) # this is sigma_0 and thus forces the scale to be 1
+  }
+  return(sigmas)
+}
+
+
+#' Compute the TPD function from a TL-AR(1) parameter
+#'
+#' This function takes a parameter scalar `phi` as input and returns the
+#'    model TPDF for lags 1 through `max_lag`
+#'
+#' @param phi the TL-AR(1) parameter
+#' @param max_lag the TPDF is computed for lags 0 through`max_lag`
+#'
+#' @returns a `vector` of model TPDF values
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- ar1_tpdf(0.3)
+ar1_tpdf <- function(phi, max_lag = 20){
+  pmax(phi^(1:max_lag), rep(0, max_lag)) # scale 1 implies just phi^h
+}
+
+
+#' Compute the TPD value for the lag-h pair from a TL-ARMA(1,1) model
+#'
+#' This function takes a `vector` pair of parameter values as input and outputs
+#'    the model TPDF for a single lag `h`. This function is called by
+#'    `arma11_tpdf` for each lag.
+#'
+#'
+#' @param params a vector of the form (`theta`, `phi`) where `theta` is the
+#'    TL-MA coefficient and `phi` is the TL-AR coefficient
+#' @param h the lag for the desired TPD value
+#'
+#' @returns a scalar TPD value
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- get_arma11_h(c(0.4, 0.1), h = 3)
+get_arma11_h <- function(params, h){
+  theta <- params[1]
+  phi <- params[2]
+  out <- 0
+  if(phi > 0){
+    if(phi + theta > 0){
+      num <- (phi + theta) * phi^(h-1) * (1 + phi*theta)
+      den <- 1 + 2 * phi * theta + theta^2
+      out <- num / den
+    }
+  } else if(phi + theta > 0){
+    if(h %% 2 == 0){
+      num <- (phi + theta)^2 * phi ^ h
+      den <- 1 - phi^4 + (phi + theta)^2
+      out <- num / den
+    } else {
+      num <- (phi + theta) * phi^(h - 1) * (1 - phi^4)
+      den <- 1 - phi^4 + (phi + theta)^2
+      out <- num / den
+    }
+  } else if(phi + theta < 0){
+    if(h %% 2 == 0){
+      num <- (phi + theta) * phi^(h - 1) * (1 + theta * phi^3)
+      den <- 1 + phi^2 * theta^2 + 2 * phi^3 * theta
+      out <- num / den
+    }
+  }
+  return(out)
+}
+
+#' Compute the TPD function from a TL-ARMA(1,1) parameter `vector`
+#'
+#' This function takes a parameter `vector` as input and returns the
+#'    model TPDF for lags 1 through `max_lag`
+#'
+#' @param params a vector of the form (`theta`, `phi`) where `theta` is the
+#'    TL-MA coefficient and `phi` is the TL-AR coefficient
+#' @param max_lag the TPDF is computed for lags 0 through`max_lag`
+#'
+#' @returns a `vector` of model TPDF values
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- arma11_tpdf(c(0.9, 0.1), max_lag = 15)
+arma11_tpdf <- function(params, max_lag = 20){
+  temp_out <- rep(0, max_lag)
+  for(h in 1:max_lag){
+    temp_out[h] <- get_arma11_h(params, h)
+  }
+  return(temp_out)
 }

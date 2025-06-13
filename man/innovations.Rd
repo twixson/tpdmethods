@@ -17,11 +17,11 @@ stabilize.}
 \value{
 a \code{list} with two components. The first component \code{out[[1]]}  is a
 \code{matrix} of innovations-estimated coefficients. The \code{n}th row contains
-coefficients for the TLETS-MA(\code{n}). The second component \code{out[[2]]} is a
+coefficients for the TL-MA(\code{n}). The second component \code{out[[2]]} is a
 vector of \code{nu} values from the innovations algorith.
 }
 \description{
-This function estimates TLETS-MA(q) coefficients using the extremes-analogue
+This function estimates TL-MA(q) coefficients using the extremes-analogue
 to the innovations algorithm for model of order q = 1, ..., max_q. The
 user inputs the estimated (or known) TPDF values and chooses a maximum
 order to fit with the recursive algorithm.

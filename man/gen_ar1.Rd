@@ -2,7 +2,7 @@
 % Please edit documentation in R/tlets.R
 \name{gen_ar1}
 \alias{gen_ar1}
-\title{Generate a TLETS-AR(1) time series}
+\title{Generate a TL-AR(1) time series}
 \usage{
 gen_ar1(n, phi)
 }
@@ -15,7 +15,7 @@ gen_ar1(n, phi)
 a \code{vector}. The length-\code{n} times series with AR(1) parameter \code{phi}.
 }
 \description{
-This function generates a TLETS-AR(1) time series of length \code{n}.
+This function generates a TL-AR(1) time series of length \code{n}.
 }
 \examples{
 out <- gen_ar1(1000, phi = 0.2)

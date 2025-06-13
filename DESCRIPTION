@@ -20,3 +20,6 @@ Imports:
 RdMacros: Rdpack
 URL: https://github.com/twixson/tpdmethods
 BugReports: https://github.com/twixson/tpdmethods/issues
+Depends: 
+    R (>= 3.5)
+LazyData: true

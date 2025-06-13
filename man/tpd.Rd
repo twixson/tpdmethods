@@ -12,6 +12,7 @@ tpd(
   get_large = TRUE,
   trans_marginal = TRUE,
   marginal_thresh = 0.975,
+  matrix_as_seasons = FALSE,
   verbose = TRUE
 )
 }
@@ -42,6 +43,11 @@ to be Fr\'echet(2). (default is \code{TRUE})}
 \item{marginal_thresh}{the quantile to use as a cutoff between the ECDF and
 GPD components in the marginal transformation. (default is 0.975)}
 
+\item{matrix_as_seasons}{change to \code{TRUE} if your time series data are stored
+as a matrix with columns representing plausibly iid replicates (e.g.,
+seasons). This protects against lagging across seasons. (default is
+\code{FALSE})}
+
 \item{verbose}{change to \code{FALSE} if you do not want to see comments.
 (default is \code{TRUE})}
 }
@@ -52,7 +58,9 @@ the estimated tpd
 This function puts the users input into a form recognizable by simpler
 functions which transform the marginal distribution, extract the large
 points, and compute the TPD value. It currently recognizes \code{matrices},
-\code{vectors} as time series, and \code{lists}.
+\code{vectors} as time series, and \code{lists} of bivariate data. \code{Matrices} can
+be bivariate data, multivariate data, or time series data split into
+seasons (use \code{matrix_as_seasons} = \code{TRUE}).
 }
 \examples{
 myData <- matrix(rnorm(10000), ncol = 2)

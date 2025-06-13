@@ -4,7 +4,9 @@
 #' This function puts the users input into a form recognizable by simpler
 #'    functions which transform the marginal distribution, extract the large
 #'    points, and compute the TPD value. It currently recognizes `matrices`,
-#'    `vectors` as time series, and `lists`.
+#'    `vectors` as time series, and `lists` of bivariate data. `Matrices` can
+#'    be bivariate data, multivariate data, or time series data split into
+#'    seasons (use `matrix_as_seasons` = `TRUE`).
 #'
 #' @param data as a `matrix`, `vector`, or `list`
 #' @param radial_quantile the quantile cutoff for computing the TPD. Points with
@@ -25,6 +27,10 @@
 #'    to be Fr\'echet(2). (default is `TRUE`)
 #' @param marginal_thresh the quantile to use as a cutoff between the ECDF and
 #'    GPD components in the marginal transformation. (default is 0.975)
+#' @param matrix_as_seasons change to `TRUE` if your time series data are stored
+#'    as a matrix with columns representing plausibly iid replicates (e.g.,
+#'    seasons). This protects against lagging across seasons. (default is
+#'    `FALSE`)
 #' @param verbose change to `FALSE` if you do not want to see comments.
 #'    (default is `TRUE`)
 #'
@@ -50,8 +56,38 @@ tpd <- function(data,
                 get_large = TRUE,
                 trans_marginal = TRUE,
                 marginal_thresh = 0.975,
+                matrix_as_seasons = FALSE,
                 verbose = TRUE){
-  if(is.matrix(data)){
+
+  if(matrix_as_seasons == TRUE){
+    if(is.matrix(data)){
+      n_seasons <- dim(data)[2]
+      if(verbose == TRUE){
+        print(paste0("Assuming this is a time series with ", n_seasons,
+                     " seasons."))
+        }
+      tpds <- numeric(max_lag + 1)
+      tpds[1] <- 1
+      n_each <- dim(data)[1] # length of each season
+      for(i in 1:max_lag){
+        lagged_data <- matrix(NA, ncol = 2, nrow = n_seasons * (n_each - i))
+        for(j in 1:n_seasons){ # lag within seasons
+          lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 1] <-
+            data[1:(n_each - i), j]
+          lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 2] <-
+            data[(1 + i):n_each, j]
+        }
+        tpds[i + 1] <- tpd.once(lagged_data, # tpd on bivariate matrix
+                                radial_quantile = radial_quantile,
+                                radial_thresh = radial_thresh,
+                                get_large = get_large,
+                                trans_marginal = trans_marginal,
+                                marginal_thresh = marginal_thresh)
+      }
+    } else {
+      stop("!#!#! matrix_as_seasons is TRUE but object is not a matrix !#!#!")
+    }
+  } else if(is.matrix(data)){
     if(min(dim(data)) < 2){
       stop("!#!#! Matrix dimension too small, try using a vector !#!#!")
     }
@@ -83,9 +119,7 @@ tpd <- function(data,
         }
       }
     }
-  }
-
-  if(is.vector(data)){
+  } else if(is.vector(data)){
     if(verbose == TRUE){print("Vector input, we assume this is a time series")}
     tpds <- numeric(max_lag + 1)
     tpds[1] <- 1
@@ -101,9 +135,7 @@ tpd <- function(data,
                               trans_marginal = trans_marginal,
                               marginal_thresh = marginal_thresh)
     }
-  }
-
-  if(is.list(data)){
+  } else if(is.list(data)){
    all_same_class <- all(sapply(data,
                                 function(x){class(x) == class(data[[1]])}))
    all_same_dimension <- all(sapply(data,

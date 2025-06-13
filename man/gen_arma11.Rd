@@ -2,7 +2,7 @@
 % Please edit documentation in R/tlets.R
 \name{gen_arma11}
 \alias{gen_arma11}
-\title{Generate a TLETS-ARMA(1, 1) time series}
+\title{Generate a TL-ARMA(1, 1) time series}
 \usage{
 gen_arma11(n, phi, theta)
 }
@@ -18,7 +18,7 @@ a \code{vector}. The length-\code{n} times series with AR(1) parameter \code{phi
 and MA(1) parameter \code{theta}.
 }
 \description{
-This function generates a TLETS-ARMA(1,1) time series of length \code{n}.
+This function generates a TL-ARMA(1,1) time series of length \code{n}.
 }
 \examples{
 out <- gen_arma11(1000, phi = 0.3, theta = -0.1)

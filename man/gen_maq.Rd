@@ -2,7 +2,7 @@
 % Please edit documentation in R/tlets.R
 \name{gen_maq}
 \alias{gen_maq}
-\title{Generate a TLETS-MA(\code{q}) time series}
+\title{Generate a TL-MA(\code{q}) time series}
 \usage{
 gen_maq(n, thetas)
 }
@@ -16,7 +16,7 @@ a \code{vector}. The length-\code{n} times series with MA(\code{q}) parameters
 \code{thetas}.
 }
 \description{
-This function generates a TLETS-MA(\code{q}) time series of length \code{n} where \code{q}
+This function generates a TL-MA(\code{q}) time series of length \code{n} where \code{q}
 is determined by \code{length(thetas)}.
 }
 \examples{
