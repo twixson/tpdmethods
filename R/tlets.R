@@ -58,6 +58,9 @@ innovations <- function(tpdf, max_q =50){
 #'
 #' @param x univariate data (`vector`) to be transformed
 #' @param q the quantile to use as a cutoff between the ECDF and GPD components
+#' @param use_gpd change to `FALSE` if you want to use a rank-transformation
+#'    only. When `TRUE` a GPD is used to estimate the upper tail. (default is
+#'    `TRUE`)
 #' @param fix_gpd_params change to `TRUE` if you want to fix either the scale
 #'    or the shape of the GPD used to fit the upper tail of the marginal
 #'    distribution. (default is `FALSE`)
@@ -76,6 +79,7 @@ innovations <- function(tpdf, max_q =50){
 #' out <- transform_marginal(myData, q = 0.95)
 transform_marginal <- function(x,
                                q = 0.975,
+                               use_gpd = TRUE,
                                fix_gpd_params = FALSE,
                                gpd_scale = -99,
                                gpd_shape = -99){
@@ -83,52 +87,59 @@ transform_marginal <- function(x,
   large_x <- which(x >= quant_q)
   x_new   <- ecdf(x)(x)
   x_new   <- x_new - 0.5 * min(x_new)
-  if(fix_gpd_params == TRUE){
-    if(gpd_scale != -99 && gpd_shape != -99){
-      for(i in 1:length(x)){
-        if(i %in% large_x){
-          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                          loc = quant_q,
-                                          scale = gpd_scale,
-                                          shape = gpd_shape)
+  if(use_gpd == TRUE){
+    if(fix_gpd_params == TRUE){
+      if(gpd_scale != -99 && gpd_shape != -99){
+        for(i in 1:length(x)){
+          if(i %in% large_x){
+            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                            loc = quant_q,
+                                            scale = gpd_scale,
+                                            shape = gpd_shape)
+          }
+        }
+      } else if(gpd_scale != -99){
+        params <- evd::fpot(x,
+                            threshold = quant_q,
+                            scale = gpd_scale,
+                            std.err = F)$estimate
+        for(i in 1:length(x)){
+          if(i %in% large_x){
+            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                            loc = quant_q,
+                                            scale = gpd_scale,
+                                            shape = params[1])
+          }
+        }
+      } else if(gpd_shape != -99){
+        params <- evd::fpot(x,
+                            threshold = quant_q,
+                            shape = gpd_shape,
+                            std.err = F)$estimate
+        for(i in 1:length(x)){
+          if(i %in% large_x){
+            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                            loc = quant_q,
+                                            scale = params[1],
+                                            shape = gpd_shape)
+          }
         }
       }
-    } else if(gpd_scale != -99){
+    } else {
       params <- evd::fpot(x,
                           threshold = quant_q,
-                          scale = gpd_scale,
                           std.err = F)$estimate
       for(i in 1:length(x)){
         if(i %in% large_x){
-          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                          loc = quant_q,
-                                          scale = gpd_scale,
-                                          shape = params[1])
-        }
-      }
-    } else if(gpd_shape != -99){
-      params <- evd::fpot(x,
-                          threshold = quant_q,
-                          shape = gpd_shape,
-                          std.err = F)$estimate
-      for(i in 1:length(x)){
-        if(i %in% large_x){
-          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                          loc = quant_q,
-                                          scale = params[1],
-                                          shape = gpd_shape)
+      x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                      loc = quant_q,
+                                      scale = params[1],
+                                      shape = params[2])
         }
       }
     }
-  } else {
-    params <- evd::fpot(x,
-                        threshold = quant_q,
-                        std.err = F)$estimate
-    x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                    loc = quant_q,
-                                    scale = params[1],
-                                    shape = params[2])
   }
+
   return(evd::qfrechet(x_new, shape = 2))
 }
 

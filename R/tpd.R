@@ -103,9 +103,11 @@ tpd <- function(data,
                        marginal_thresh = marginal_thresh)
     } else {
       if(verbose == TRUE){
-        print("Matrix input, we assume rows represent replicates.")}
+        print("Matrix input, we assume rows represent replicates")
+        print(". . . and columns represent variables.")}
       d <- dim(data)[2] # dimension of the problem (e.g., number of stations)
       tpds <- matrix(1, nrow = d, ncol = d)
+      tictoc::tic(paste0("finished 100 of ", d, " rows of the TPDM"))
       for(j in 1:(d - 1)){
         for(k in (j+1):d){
           temp_data <- data[, c(j,k)]
@@ -116,6 +118,10 @@ tpd <- function(data,
                                  trans_marginal = trans_marginal,
                                  marginal_thresh = marginal_thresh)
           tpds[k, j] <- tpds[j, k]
+        }
+        if(j %% 100 == 0){
+          tictoc::toc()
+          tictoc::tic(paste0("finished ", j+100, " of ", d, " rows of the TPDM"))
         }
       }
     }

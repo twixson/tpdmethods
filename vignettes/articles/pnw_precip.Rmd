@@ -1,0 +1,137 @@
+---
+title: "pnw_precip"
+output: rmarkdown::html_vignette
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tpdmethods)
+
+precip_data <- readRDS("~/Documents/Research/Principle_Component_Analysis/pnw_precip_data_pkg_subset.rds")
+dim(precip_data)
+precip_data[1:10, 1:6]
+```
+
+
+
+```{r "transform_margins"}
+precip_alpha2 <- apply(precip_data[-c(1,2), -c(1)], 2, 
+                       transform_marginal, 
+                       use_gpd = FALSE)
+lat_lon <- data.frame("lon" = precip_data[1, -c(1)],
+                      "lat" = precip_data[2, -c(1)])
+dates <- precip_data[-c(1,2), 1]
+```
+
+```{r "tpdm_estimation", cache = TRUE}
+tpdm <- matrix(NA, nrow = dim(precip_alpha2)[2], ncol = dim(precip_alpha2)[2])
+tictoc::tic("tpdm estimation")
+tpdm <- tpd(precip_alpha2, trans_marginal = FALSE)
+tictoc::toc()
+```
+
+```{r "eigen_decomposition"}
+eigen_tpdm <- get_eigen(tpdm, make_pd = TRUE)
+```
+
+```{r "eigenvector plots", fig.height=6, fig.width = 6}
+eigen_plots <- lapply(1:8, plot_eigen, 
+                      eigen_vecs = eigen_tpdm$vectors, 
+                      eigen_vals = eigen_tpdm$values, 
+                      lat = lat_lon$lat, 
+                      lon = lat_lon$lon)
+cowplot::plot_grid(plotlist = eigen_plots, nrow = 2, ncol = 2, align = "hv")
+```
+
+```{r "transformed_eigen_plots", fig.height=6, fig.width=6}
+t_eigen_plots <- lapply(1:8, plot_eigen, 
+                      eigen_vecs = f(eigen_tpdm$vectors), 
+                      eigen_vals = eigen_tpdm$values, 
+                      lat = lat_lon$lat, 
+                      lon = lat_lon$lon)
+cowplot::plot_grid(plotlist = t_eigen_plots, nrow = 2, ncol = 2, align = "hv")
+```
+
+
+
+*****I SHOULD MAKE A FUNCTION THAT CREATES A GRID OF STORM RECONSTRUCTION PLOTS WITH 
+DEFAULT CHOSEN EIGENVECTORS BUT ALSO ALLOW THE USER TO INPUT THIS. 
+
+
+```{r "storm reconstruction", fig.width = 9, fig.height = 5}
+storm_ind <- which(dates== "20210112")
+storm_plots <- list()
+
+# look at storm 
+temp_plot <- plot_sf(precip_alpha2[storm_ind, ], 
+                     plot_title = "storm_20210112", 
+                     lat = lat_lon$lat, 
+                     lon = lat_lon$lon)
+plot(temp_plot)
+
+jan_12 <- precip_alpha2[storm_ind, ]
+
+jan_12_pcs <- get_pcs(data_vec = jan_12, eigenvecs = eigen_tpdm$vectors)
+
+total_scale <- sum(eigen_tpdm$values)
+partial_scale <- cumsum(eigen_tpdm$values)
+prop_scale <- round(partial_scale/total_scale, 3)
+
+storm_plots[[1]] <- plot_sf(jan_12, 
+                            plot_title = "Historical Storm", 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon) + 
+  ggplot2::labs(subtitle = "January 12, 2021")
+storm_plots[[2]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 1), 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon,
+                            plot_title = "1 Eigenvector") + 
+  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[1]))
+storm_plots[[3]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 5), 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon,
+                            plot_title = "5 Eigenvectors") + 
+  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[5]))
+storm_plots[[4]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 20), 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon,
+                            plot_title = "20 Eigenvectors") + 
+  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[20]))
+storm_plots[[5]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 100), 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon,
+                            plot_title = "100 Eigenvectors") + 
+  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[100]))
+storm_plots[[6]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 1000), 
+                            lat = lat_lon$lat, 
+                            lon = lat_lon$lon,
+                            plot_title = "1000 Eigenvectors") + 
+  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[1000]))
+
+
+
+# pdf("./reconstructed_storm_20211112.pdf", height = 10, width = 7.5)
+cowplot::plot_grid(plotlist = storm_plots, nrow = 2, ncol = 3, align = "hv")
+```
+
+
+
+
+```{r "PC_time_series", fig.height=5, fig.width=9}
+
+ts_plots <- list()
+
+ts_plots <- lapply(c(1:6), get_ts_plot, 
+                   eigen_vec = eigen_tpdm$vectors, 
+                   dates = dates, 
+                   data = precip_alpha2)
+
+
+cowplot::plot_grid(plotlist = ts_plots, nrow = 2, ncol = 3, align = "hv")
+```

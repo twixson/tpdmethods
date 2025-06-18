@@ -7,6 +7,7 @@
 transform_marginal(
   x,
   q = 0.975,
+  use_gpd = TRUE,
   fix_gpd_params = FALSE,
   gpd_scale = -99,
   gpd_shape = -99
@@ -16,6 +17,10 @@ transform_marginal(
 \item{x}{univariate data (\code{vector}) to be transformed}
 
 \item{q}{the quantile to use as a cutoff between the ECDF and GPD components}
+
+\item{use_gpd}{change to \code{FALSE} if you want to use a rank-transformation
+only. When \code{TRUE} a GPD is used to estimate the upper tail. (default is
+\code{TRUE})}
 
 \item{fix_gpd_params}{change to \code{TRUE} if you want to fix either the scale
 or the shape of the GPD used to fit the upper tail of the marginal
