@@ -21,10 +21,14 @@ get_eigen <- function(tpdm, make_pd = TRUE){
   if(make_pd == TRUE){
     tpdm <- make_pd(tpdm)$mat
   }
-  # ?????????????????????????????????????
-  # Do we want to add a processing step which negates any eigenvector that is
-  #    all non-positive?
-  return(eigen(tpdm))
+  temp_out <- eigen(tpdm)
+
+  for(i in 1:length(temp_out$values)){
+    if(max(temp_out$vectors[,i]) < 0){
+      temp_out$vectors[,i] <- -temp_out$vectors[,i]
+    }
+  }
+  return(temp_out)
 }
 
 

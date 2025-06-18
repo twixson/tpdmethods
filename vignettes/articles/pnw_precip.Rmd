@@ -65,12 +65,17 @@ DEFAULT CHOSEN EIGENVECTORS BUT ALSO ALLOW THE USER TO INPUT THIS.
 
 
 ```{r "storm reconstruction", fig.width = 9, fig.height = 5}
+storm_totals <- rowSums(precip_alpha2)
+max_rain <- which.max(storm_totals)
+
 storm_ind <- which(dates== "20210112")
 storm_plots <- list()
+storm_totals[c(max_rain, storm_ind)]
+storm_ind <- max_rain
 
 # look at storm 
 temp_plot <- plot_sf(precip_alpha2[storm_ind, ], 
-                     plot_title = "storm_20210112", 
+                     plot_title = "storm_20071203", 
                      lat = lat_lon$lat, 
                      lon = lat_lon$lon)
 plot(temp_plot)
@@ -87,7 +92,7 @@ storm_plots[[1]] <- plot_sf(jan_12,
                             plot_title = "Historical Storm", 
                             lat = lat_lon$lat, 
                             lon = lat_lon$lon) + 
-  ggplot2::labs(subtitle = "January 12, 2021")
+  ggplot2::labs(subtitle = "December 3, 2007")
 storm_plots[[2]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 1), 
                             lat = lat_lon$lat, 
                             lon = lat_lon$lon,
