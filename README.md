@@ -195,13 +195,15 @@ round(generated_confints, 4)
 
 Note the broad agreement between our data and the fitted model.
 
-This brief example demonstrated a few of the key functions: \* `tpd()` -
-for estimating the TPD function with replicated time series. \*
-`innovations()` - for fitting any order TL-MA(q) model based on the
-estimated TPD function. \* `maq_tpdf()` - for computing the model TPD
-function. \* `gen_maq()` - for generating observations from a TL-MA(q)
-process. \* `transform_marginal()` - for transforming the marginal
-distribution to be Fréchet($2$).
+This brief example demonstrated a few of the key functions:
+
+- `tpd()` - for estimating the TPD function with replicated time series.
+- `innovations()` - for fitting any order TL-MA(q) model based on the
+  estimated TPD function.
+- `maq_tpdf()` - for computing the model TPD function.
+- `gen_maq()` - for generating observations from a TL-MA(q) process.
+- `transform_marginal()` - for transforming the marginal distribution to
+  be Fréchet($2$).
 
 ## Example 2: Principal Components Analysis - Financial Data
 

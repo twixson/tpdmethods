@@ -186,6 +186,7 @@ round(generated_confints, 4)
 Note the broad agreement between our data and the fitted model. 
 
 This brief example demonstrated a few of the key functions: 
+
 * `tpd()` - for estimating the TPD function with replicated time series.
 * `innovations()` - for fitting any order TL-MA(q) model based on the estimated
   TPD function.
