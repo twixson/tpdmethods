@@ -2,52 +2,30 @@
 % Please edit documentation in R/pca.R
 \name{plot_eigen}
 \alias{plot_eigen}
-\title{Plot a single eigenvector.}
+\title{Create a plot of several eigenvectors.}
 \usage{
-plot_eigen(
-  eigen_num,
-  eigen_vecs,
-  eigen_vals,
-  lat,
-  lon,
-  same_scale = FALSE,
-  scale_lims = c(-99, -99)
-)
+plot_eigen(eigen_vecs, num_vecs = 5, var_names)
 }
 \arguments{
-\item{eigen_num}{which eigenvector you want to plot}
+\item{eigen_vecs}{The \code{matrix} of eigenvectors.}
 
-\item{eigen_vecs}{the \code{matrix} of eigenvectors}
+\item{num_vecs}{the eigenvectors you want to plot. If you input a single
+value (n) then eigenvectors 1:n will be plotted. If you input a vector
+then eigenvectors in that vector will be plotted. (default is 5)}
 
-\item{eigen_vals}{the \code{vector} of eigenvalues}
-
-\item{lat}{a \code{vector} of latitudes}
-
-\item{lon}{a \code{vector} of longitudes}
-
-\item{same_scale}{change to \code{TRUE} if you want to force several plots to
-have the same scale. (default is \code{FALSE})}
-
-\item{scale_lims}{a bivariate \code{vector} of the form (scale minimum, scale
-maximum). (default is c(-99, -99))}
+\item{var_names}{The names of the variables, used for making nice x-axis
+tick mark labels.}
 }
 \value{
-a ggplot2 \code{plot} object
+a \code{ggplot2} plot object
 }
 \description{
-This is a wrapper fuction to plot a map showing the value of a single
-eigenvector using latitude and longitude.
-Note that eigenvalues and eigenvectors are separated for easier
-plotting of transformed-linear reconstructions.
+This function is a \code{ggplot2} wrapper which plots several eigenvectors weights
+on a common binned scale which is automatically computed.
 }
 \examples{
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
-plot1 <- plot_eigen(1,
-                    eigen_vecs = myEigen$vectors,
-                    eigen_vals = myEigen$values,
-                    lat = 1:25,
-                    lon = 1:25)
-plot1
+out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:3)
 }

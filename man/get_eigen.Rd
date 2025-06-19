@@ -22,7 +22,7 @@ the closest PD matrix to the input TPDM using the \code{nearPD()} function.
 }
 \examples{
 set.seed(22)
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 out <- get_eigen(myTPDM)
 }

@@ -20,7 +20,7 @@ a \code{vector} of the principal components for each observation.
 Compute the time series of a single principle component.
 }
 \examples{
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
 out <- get_pc_ts(1, eigen_vecs = myEigen$vectors, data = myData)

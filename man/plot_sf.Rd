@@ -23,6 +23,6 @@ This is a wrapper function for creating and plotting an \code{sf} object. We use
 it to plot partial reconstructions created with \code{reconstruct_data()}.
 }
 \examples{
-myData <- rnorm(25)
+myData <- evd::rfrechet(25, shape = 2)
 out <- plot_sf(myData, plot_title = "Example Plot", lat = 1:5, lon = 1:5)
 }

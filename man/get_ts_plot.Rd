@@ -24,7 +24,7 @@ This function is a wrapper to compute and plot a time series for a single
 principle component.
 }
 \examples{
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
 out <- get_ts_plot(eigen_num = 1,

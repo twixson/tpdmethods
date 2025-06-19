@@ -18,10 +18,10 @@ a \code{vector} of principal components
 Get the principal components of a data vector
 }
 \examples{
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
-myDatavec <- abs(rnorm(5))
+myDatavec <- abs(evd::rfrechet(5, shape = 2))
 out <- get_pcs(myDatavec, eigenvecs = myEigen$vectors)
 }
 \references{

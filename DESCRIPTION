@@ -21,7 +21,8 @@ Imports:
     Matrix,
     Rdpack,
     sf,
-    tictoc
+    tictoc,
+    tidyr
 RdMacros: Rdpack
 URL: https://github.com/twixson/tpdmethods
 BugReports: https://github.com/twixson/tpdmethods/issues

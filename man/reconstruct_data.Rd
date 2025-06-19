@@ -25,10 +25,10 @@ This function allows for the partial reconstruction of a data vector (for
 example, of a big storm) using the \code{num_eigen} largest eigenvectors.
 }
 \examples{
-myData <- matrix(rnorm(625), ncol = 5)
+myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
-myDatavec <- abs(rnorm(5))
+myDatavec <- abs(evd::rfrechet(5, shape = 2))
 myPCs <- get_pcs(myDatavec, eigenvecs = myEigen$vectors)
 out <- reconstruct_data(myPCs, eigenvecs = myEigen$vectors, num_eigen = 3)
 }

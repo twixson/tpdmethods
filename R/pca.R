@@ -14,7 +14,7 @@
 #'
 #' @examples
 #' set.seed(22)
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' out <- get_eigen(myTPDM)
 get_eigen <- function(tpdm, make_pd = TRUE){
@@ -42,7 +42,7 @@ get_eigen <- function(tpdm, make_pd = TRUE){
 #' @export
 #'
 #' @examples
-#' myData <- matrix(rnorm(25), ncol = 5)
+#' myData <- matrix(evd::rfrechet(25, shape = 2), ncol = 5)
 #' out <- make_pd(myData)
 make_pd <- function(x){
   Matrix::nearPD(x)
@@ -70,22 +70,22 @@ make_pd <- function(x){
 #' @export
 #'
 #' @examples
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
-#' plot1 <- plot_eigen(1,
-#'                     eigen_vecs = myEigen$vectors,
-#'                     eigen_vals = myEigen$values,
-#'                     lat = 1:25,
-#'                     lon = 1:25)
+#' plot1 <- plot_eigen_map(1,
+#'                         eigen_vecs = myEigen$vectors,
+#'                         eigen_vals = myEigen$values,
+#'                         lat = 1:25,
+#'                         lon = 1:25)
 #' plot1
-plot_eigen <- function(eigen_num,
-                       eigen_vecs,
-                       eigen_vals,
-                       lat,
-                       lon,
-                       same_scale = FALSE,
-                       scale_lims = c(-99, -99)){
+plot_eigen_map <- function(eigen_num,
+                           eigen_vecs,
+                           eigen_vals,
+                           lat,
+                           lon,
+                           same_scale = FALSE,
+                           scale_lims = c(-99, -99)){
   temp_df <- data.frame("lat" = lat,
                         "lon" = lon,
                         "eigen" = eigen_vecs[,eigen_num])
@@ -114,10 +114,125 @@ plot_eigen <- function(eigen_num,
            subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
       ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
   }
+  return(plot1)
+}
 
+
+#' Create a plot of several eigenvectors.
+#'
+#' This function is a `ggplot2` wrapper which plots several eigenvectors weights
+#'    on a common binned scale which is automatically computed.
+#'
+#' @param eigen_vecs The `matrix` of eigenvectors.
+#' @param num_vecs the eigenvectors you want to plot. If you input a single
+#'    value (n) then eigenvectors 1:n will be plotted. If you input a vector
+#'    then eigenvectors in that vector will be plotted. (default is 5)
+#' @param var_names The names of the variables, used for making nice x-axis
+#'    tick mark labels.
+#'
+#' @returns a `ggplot2` plot object
+#' @export
+#'
+#' @examples
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
+#' myTPDM <- tpd(myData)
+#' myEigen <- get_eigen(myTPDM)
+#' out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:3)
+plot_eigen <- function(eigen_vecs, num_vecs = 5, var_names){
+  max_lim <- max(abs(eigen_vecs)) + 0.001
+  mbreaks <- round(seq(-max_lim, max_lim, length.out = 10), 2)[-c(1, 10)]
+
+  if(length(num_vecs) == 1){
+    temp_data <- data.frame(eigen_vecs[,1:num_vecs])
+    y_labs    <- num_vecs:1
+  } else {
+    temp_data <- data.frame(eigen_vecs[,num_vecs])
+    y_labs    <- num_vecs[length(num_vecs):1]
+  }
+  temp_data$x <- var_names
+  temp_data   <- tidyr::pivot_longer(temp_data,
+                                     cols = -c('x'),
+                                     names_to = "eigenvector")
+
+  get_cols <- function(x){
+    cols_out    <- numeric(length(x))
+    cols        <- scico::scico(8, palette = 'vik')
+    cols        <- c(cols[1:4], "#FFFFFF", cols[5:8])
+    unit_breaks <- seq(0, 1, length.out = 10)
+    for(i in 1:length(x)){
+      cols_out[i] <- cols[which.min(x[i] > unit_breaks) - 1]
+    }
+    return(cols_out)
+  }
+  plot1   <- ggplot2::ggplot(temp_data, ggplot2::aes(x, eigenvector)) +
+    ggplot2::geom_raster(ggplot2::aes(fill = value)) +
+    ggplot2::xlab(label = "") +
+    ggplot2::scale_y_discrete(labels = y_labs, limits = rev) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(axis.text.x=
+                     ggplot2::element_text(angle=40, vjust=1, hjust=0.9)) +
+    ggplot2:: binned_scale(aesthetics = "fill",
+                           palette = get_cols,
+                           guide = "bins",
+                           breaks = mbreaks,
+                           limits = c(-max_lim, max_lim)) +
+    ggplot2::guides(fill = ggplot2::guide_colorsteps(rev = TRUE, title = ""))
 
   return(plot1)
 }
+
+
+
+#' Create a scree plot for TPDM eigenvalues
+#'
+#' This function is a `ggplot2` wrapper which creates a scree plot (elbow plot)
+#'    for the first `max_ind` eigenvalues from an eigen decomposition.
+#'
+#' @param eigen_vals The `vector` of eigenvalues.
+#' @param max_ind The index of the last eigenvalue you want included in the
+#'    plot. This is necessary when you have many eigenvalues and do not want to
+#'    plot them all. (default is 10)
+#' @param normalize Change to `FALSE` if you do not want to normalize the
+#'    eigenvalues so that they sum to 1. (default is `TRUE`)
+#'
+#' @returns a `ggplot2` plot object
+#' @export
+#'
+#' @examples
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
+#' myTPDM <- tpd(myData)
+#' myEigen <- get_eigen(myTPDM)
+#' out <- plot_scree(myEigen$values, max_ind = 3, normalize = FALSE)
+plot_scree <- function(eigen_vals, max_ind = 10, normalize = TRUE){
+  if(normalize == TRUE){
+    temp_data <- data.frame(index = 1:max_ind,
+                            normed_eigenvalue =
+                              eigen_vals[1:max_ind]/sum(eigen_vals))
+    plot1 <- ggplot2::ggplot(temp_data,
+                             ggplot2::aes(x = index, y = normed_eigenvalue)) +
+      ggplot2::geom_line(alpha = 0.5) +
+      ggplot2::geom_point(size=5, colour="white") +
+      ggplot2::geom_point(size = 2, shape = 24) +
+      ggplot2::xlab("") +
+      ggplot2::scale_x_continuous(breaks = 1:max_ind, labels = 1:max_ind) +
+      ggplot2::theme_minimal()
+  } else {
+    temp_data <- data.frame(index = 1:max_ind,
+                            eigenvalue = eigen_vals[1:max_ind])
+
+  plot1 <- ggplot2::ggplot(temp_data,
+                           ggplot2::aes(x = index, y = eigenvalue)) +
+    ggplot2::geom_line(alpha = 0.5) +
+    ggplot2::geom_point(size=5, colour="white") +
+    ggplot2::geom_point(size = 2, shape = 24) +
+    ggplot2::xlab("") +
+    ggplot2::scale_x_continuous(breaks = 1:max_ind, labels = 1:max_ind) +
+    ggplot2::theme_minimal()
+  }
+  return(plot1)
+}
+
+
 
 #' Get the principal components of a data vector
 #'
@@ -131,10 +246,10 @@ plot_eigen <- function(eigen_num,
 #' \insertRef{cooley_thibaud_2019}{tpdmethods}
 #'
 #' @examples
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
-#' myDatavec <- abs(rnorm(5))
+#' myDatavec <- abs(evd::rfrechet(5, shape = 2))
 #' out <- get_pcs(myDatavec, eigenvecs = myEigen$vectors)
 get_pcs <- function(data_vec, eigenvecs){
   data_vec[which(data_vec == 0)] <- 0.00001
@@ -163,10 +278,10 @@ get_pcs <- function(data_vec, eigenvecs){
 #' \insertRef{cooley_thibaud_2019}{tpdmethods}
 #'
 #' @examples
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
-#' myDatavec <- abs(rnorm(5))
+#' myDatavec <- abs(evd::rfrechet(5, shape = 2))
 #' myPCs <- get_pcs(myDatavec, eigenvecs = myEigen$vectors)
 #' out <- reconstruct_data(myPCs, eigenvecs = myEigen$vectors, num_eigen = 3)
 reconstruct_data <- function(pcs, eigenvecs, num_eigen){
@@ -195,7 +310,7 @@ reconstruct_data <- function(pcs, eigenvecs, num_eigen){
 #' @export
 #'
 #' @examples
-#' myData <- rnorm(25)
+#' myData <- evd::rfrechet(25, shape = 2)
 #' out <- plot_sf(myData, plot_title = "Example Plot", lat = 1:5, lon = 1:5)
 plot_sf <- function(data, plot_title, lat, lon){
   temp_df <- data.frame("lat" = lat,
@@ -224,7 +339,7 @@ plot_sf <- function(data, plot_title, lat, lon){
 #' \insertRef{cooley_thibaud_2019}{tpdmethods}
 #'
 #' @examples
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
 #' out <- get_pc_ts(1, eigen_vecs = myEigen$vectors, data = myData)
@@ -250,7 +365,7 @@ get_pc_ts <- function(eigen_num, eigen_vecs, data){
 #' \insertRef{cooley_thibaud_2019}{tpdmethods}
 #'
 #' @examples
-#' myData <- matrix(rnorm(625), ncol = 5)
+#' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
 #' out <- get_ts_plot(eigen_num = 1,
@@ -265,9 +380,9 @@ get_ts_plot <- function(eigen_num,
   temp_df <- data.frame("Date" = dates,
                         "PC_Score" = ts_vec,
                         "x_index" = 1:length(dates))
-  x_ticks <- grep("0331", dates)
+  # x_ticks <- grep("0331", dates)
 
-  if(dates[1] == FALSE){
+  if(class(dates) != "Date"){
     temp_plot <- ggplot2::ggplot(temp_df,
                                  ggplot2::aes(x = x_index, y = PC_Score)) +
       ggplot2::geom_line() +
@@ -277,13 +392,13 @@ get_ts_plot <- function(eigen_num,
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 30))
   } else {
     temp_plot <- ggplot2::ggplot(temp_df,
-                                 ggplot2::aes(x = x_index, y = PC_Score)) +
+                                 ggplot2::aes(x = dates, y = PC_Score)) +
       ggplot2::geom_line() +
       ggplot2::ylab("PC Score") +
       ggplot2::xlab("Date") +
-      ggplot2::scale_x_continuous(breaks = x_ticks[seq(5, 40, length.out = 8)],
-                         label = substr(temp_df$Date[x_ticks], start = 1,
-                                        stop = 4)[seq(5, 40, length.out = 8)]) +
+      # ggplot2::scale_x_continuous(breaks = x_ticks[seq(5, 40, length.out = 8)],
+      #                    label = substr(temp_df$Date[x_ticks], start = 1,
+      #                                   stop = 4)[seq(5, 40, length.out = 8)]) +
       ggplot2::labs(title = paste0("Principle Component ", eigen_num)) +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 30))
   }

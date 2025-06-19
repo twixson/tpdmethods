@@ -212,7 +212,8 @@ principal components analysis using financial data from the Kenneth R.
 French Data Library. These data are included in the package as
 `financial_data`. The data consist of 13599 observations of losses from
 30 financial sectors (e.g., coal, autos, and retail) from 1970 through
-2023.
+2023. Definitions of the financial sectors can be found in
+`Industry_definitions.txt`.
 
 We begin by estimating the TPD matrix (TPDM):
 
@@ -236,18 +237,117 @@ close to the estimated TPDM using the `make_pd = TRUE` toggle in the
 eigen_tpdm <- get_eigen(tpdm, make_pd = TRUE)
 ```
 
-I NEED TO MAKE A FUNCTION THAT RETURNS THE EIGENPLOTS THAT DAN HAS IN
-HIS FINANCIAL EXPLORATION.
+Now that we have the eigen decomposition of the TPDM we can try to
+interpret the eigenvectors and eigenvalues using some plots. Our first
+plot is a scree plot which demonstrates how important the first
+eigenvalue is. We include this plot twice to show that the `normalize`
+argument only changes the scale.
 
 ``` r
-fivenum(eigen_tpdm$vectors[,1])
-#> [1] 0.1379751 0.1739027 0.1853870 0.1958264 0.2042286
-fivenum(eigen_tpdm$vectors[,2])
-#> [1] -0.39999359 -0.06395744  0.03315343  0.11228094  0.29537920
-fivenum(eigen_tpdm$vectors[,3])
-#> [1] -0.22866809 -0.12699828 -0.03387696  0.12182162  0.41570422
-fivenum(eigen_tpdm$vectors[,4])
-#> [1] -0.35077961 -0.11444792 -0.04861159  0.08740598  0.50443052
-fivenum(eigen_tpdm$vectors[,5])
-#> [1] -0.16996430 -0.09839706 -0.05095608  0.05488521  0.80497718
+p1 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = TRUE)
+p2 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = FALSE)
+cowplot::plot_grid(p1, p2, ncol = 2)
 ```
+
+<img src="man/figures/README-scree-1.png" width="100%" />
+
+The next plot looks at the eigenvector loadings.
+
+``` r
+plot_eigen(eigen_tpdm$vectors, 
+           num_vecs = 5, 
+           var_names = colnames(financial_data[-c(1)]))
+```
+
+<img src="man/figures/README-eigen_plot-1.png" width="100%" />
+
+This plot shows that the first (and by-far most important) eigenvector
+is nearly constant which suggests that large losses in any sector are
+frequently accompanied by large losses across the entire market. The
+next eigenvalues distinguish between sub-components of the financial
+market. The second eigenvector suggests that the beer, food, health,
+household, and smoke sectors of the market tend to have less extreme
+losses than more discretionary items like autos, books, etc.
+
+In addition to these plots, we can make time series plots for a few
+principal components.
+
+``` r
+dates <- as.Date(as.character(financial_data[,1]), "%Y%m%d")
+ts1_plot <- get_ts_plot(eigen_num = 1, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+ts2_plot <- get_ts_plot(eigen_num = 2, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+ts3_plot <- get_ts_plot(eigen_num = 3, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+                  
+cowplot::plot_grid(ts1_plot, ts2_plot, ts3_plot, nrow = 3)
+```
+
+<img src="man/figures/README-time_series_plots-1.png" width="100%" />
+
+There is a very large negative value in principal component 1. What day
+is that?
+
+``` r
+ts1 <- get_pc_ts(eigen_num = 1, 
+                 eigen_vecs = eigen_tpdm$vectors, 
+                 data = as.matrix(financial_data[,-1]))
+ts1_ordered <- order(ts1)
+dates[head(ts1_ordered)]
+#> [1] "1987-10-19" "2020-03-16" "2020-03-12" "2008-10-15" "2008-12-01"
+#> [6] "1987-10-26"
+```
+
+The largest loss is Black Monday, October 19, 1987, which is the largest
+single-day U.S. stock market loss. The second largest loss, March 16,
+2020, is the second Black Monday of the 2020 stock market crash due to
+COVID-29.
+
+Finally, we can look at scatterplots of the first principal components.
+
+``` r
+scatter_df <- data.frame(pc1 = ts1, 
+                         pc2 = get_pc_ts(eigen_num = 2, 
+                                         eigen_vecs = eigen_tpdm$vectors, 
+                                         data = as.matrix(financial_data[,-1])))
+max_val <- max(abs(scatter_df))
+
+radii <- apply(scatter_df, 1, function(x){sqrt(sum(x^2))})
+scatter_df$large <- as.factor(
+  ifelse(radii > quantile(probs = 0.95, radii), 1, 0))
+
+ggplot2::ggplot(scatter_df, ggplot2::aes(x = pc1, y = pc2)) + 
+  ggplot2::geom_point(ggplot2::aes(col = large), alpha = 0.5) + 
+  ggplot2::coord_fixed() + 
+  ggplot2::scale_color_discrete(type = scico::scico(4, palette = "vik")[2:3]) + 
+  ggplot2::theme_minimal()
+```
+
+<img src="man/figures/README-scatter-1.png" width="100%" />
+
+In this brief example we demonstrated a few of the key PCA analogue
+functions:
+
+- `tpd()` - for estimating the TPD matrix of in a multivariate setting.
+- `get_eigen()` - for performing the eigen decomposition of a positive
+  definite matrix that is close to the estimated TPDM
+- `plot_scree()` - for creating a scree plot of the eigenvalues.
+- `plot_eigen()` - for creating a plot which shows eigenvector
+  loadings.  
+- `get_ts_plot()` - for creating a time series plot of a principal
+  component.
+- `get_pc_ts()` - for getting the principal component time series for
+  further investigation.
+
+## Conclusion
+
+This `tpdmethods` package is under active development. We have plans to
+improve and add to the tools that it provides. If you have suggestions
+please reach out to the authors!

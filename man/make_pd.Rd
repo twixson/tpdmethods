@@ -16,6 +16,6 @@ a \code{matrix} that is PD
 This is just a wrapper for the \code{Matrix} function \code{nearPD()}
 }
 \examples{
-myData <- matrix(rnorm(25), ncol = 5)
+myData <- matrix(evd::rfrechet(25, shape = 2), ncol = 5)
 out <- make_pd(myData)
 }
