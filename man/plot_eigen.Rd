@@ -27,5 +27,5 @@ on a common binned scale which is automatically computed.
 myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 myTPDM <- tpd(myData)
 myEigen <- get_eigen(myTPDM)
-out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:3)
+out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:5)
 }

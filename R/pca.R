@@ -137,7 +137,7 @@ plot_eigen_map <- function(eigen_num,
 #' myData <- matrix(evd::rfrechet(625, shape = 2), ncol = 5)
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
-#' out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:3)
+#' out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:5)
 plot_eigen <- function(eigen_vecs, num_vecs = 5, var_names){
   max_lim <- max(abs(eigen_vecs)) + 0.001
   mbreaks <- round(seq(-max_lim, max_lim, length.out = 10), 2)[-c(1, 10)]
@@ -380,9 +380,8 @@ get_ts_plot <- function(eigen_num,
   temp_df <- data.frame("Date" = dates,
                         "PC_Score" = ts_vec,
                         "x_index" = 1:length(dates))
-  # x_ticks <- grep("0331", dates)
 
-  if(class(dates) != "Date"){
+  if(!is(dates, "Date")){
     temp_plot <- ggplot2::ggplot(temp_df,
                                  ggplot2::aes(x = x_index, y = PC_Score)) +
       ggplot2::geom_line() +

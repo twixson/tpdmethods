@@ -89,7 +89,7 @@ moving average (TL-MA) model up to order `q = 20`. We will visually compare the
 plot of the fitted TPD function to the empirical TPD function to determine which
 model to retain. 
 
-```{r 'fit MAs', fig.height=3, fig.width=7}
+```{r 'fit_MAs', fig.height=3, fig.width=7}
 set.seed(1982374)
 model_coefs_present <- innovations(fw_tpd_present, max_q = 20)
 fitted_model_tpdf <- maq_tpdf(model_coefs_present[[1]][15,], max_lag = 30)
@@ -152,7 +152,7 @@ Note that the marginal distribution is unknown so we transform to Fréchet($2$)
 margins with `transform_marginal()` so that we can compare to the observed 
 RV FWI data. 
 
-```{r 'generate seasons', cache = TRUE}
+```{r 'generate_seasons'}
 set.seed(2389098)
 temp_present <- gen_maq(n = 153*1000, 
                         thetas = model_coefs_present[[1]][15,1:15])

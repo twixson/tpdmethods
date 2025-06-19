@@ -104,7 +104,7 @@ legend("topright", legend = c("empirical", "MA(15)"),
 abline(h = 0.1, lty = 2, col = "grey")
 ```
 
-<img src="man/figures/README-fit MAs-1.png" width="100%" />
+<img src="man/figures/README-fit_MAs-1.png" width="100%" />
 
 Here we can see the TL-MA(15) model fits well up to lag-15. TL-MA(q)
 models have non-zero TPDFs only up to lag-q just like classical MA(q)
