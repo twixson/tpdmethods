@@ -19,6 +19,8 @@ implement these extremal analysis pipelines in this R package
 ‘tpdmethods’. The package includes datasets and vignettes for
 precipitation and fire weather analyses.
 
+% % % % %
+
 ## Installation
 
 You can install the development version of tpdmethods from
@@ -28,6 +30,8 @@ You can install the development version of tpdmethods from
 # install.packages("pak") # pak is a method to download packages from a variety of sources.
 pak::pak("twixson/tpdmethods")
 ```
+
+% % % % %
 
 ## Example 1: Time Series - Fire Weather
 
@@ -205,6 +209,8 @@ This brief example demonstrated a few of the key functions:
 - `transform_marginal()` - for transforming the marginal distribution to
   be Fréchet($2$).
 
+% % % % %
+
 ## Example 2: Principal Components Analysis - Financial Data
 
 In this second breif example we will explore the extremes analogue to
@@ -345,6 +351,8 @@ functions:
   component.
 - `get_pc_ts()` - for getting the principal component time series for
   further investigation.
+
+% % % % %
 
 ## Conclusion
 

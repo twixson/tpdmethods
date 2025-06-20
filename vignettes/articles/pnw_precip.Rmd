@@ -26,13 +26,14 @@ precip_alpha2 <- apply(precip_data[-c(1,2), -c(1)], 2,
                        use_gpd = FALSE)
 lat_lon <- data.frame("lon" = precip_data[1, -c(1)],
                       "lat" = precip_data[2, -c(1)])
-dates <- precip_data[-c(1,2), 1]
+dates <- as.Date(as.character(precip_data[-c(1,2), 1]), "%Y%m%d")
 ```
 
 ```{r "tpdm_estimation", cache = TRUE}
 tpdm <- matrix(NA, nrow = dim(precip_alpha2)[2], ncol = dim(precip_alpha2)[2])
 tictoc::tic("tpdm estimation")
 tpdm <- tpd(precip_alpha2, trans_marginal = FALSE)
+tictoc::toc()
 tictoc::toc()
 ```
 
@@ -41,7 +42,7 @@ eigen_tpdm <- get_eigen(tpdm, make_pd = TRUE)
 ```
 
 ```{r "eigenvector plots", fig.height=6, fig.width = 6}
-eigen_plots <- lapply(1:8, plot_eigen, 
+eigen_plots <- lapply(1:8, plot_eigen_map, 
                       eigen_vecs = eigen_tpdm$vectors, 
                       eigen_vals = eigen_tpdm$values, 
                       lat = lat_lon$lat, 
@@ -50,7 +51,7 @@ cowplot::plot_grid(plotlist = eigen_plots, nrow = 2, ncol = 2, align = "hv")
 ```
 
 ```{r "transformed_eigen_plots", fig.height=6, fig.width=6}
-t_eigen_plots <- lapply(1:8, plot_eigen, 
+t_eigen_plots <- lapply(1:8, plot_eigen_map, 
                       eigen_vecs = f(eigen_tpdm$vectors), 
                       eigen_vals = eigen_tpdm$values, 
                       lat = lat_lon$lat, 
@@ -58,74 +59,44 @@ t_eigen_plots <- lapply(1:8, plot_eigen,
 cowplot::plot_grid(plotlist = t_eigen_plots, nrow = 2, ncol = 2, align = "hv")
 ```
 
+The eigenvalues indicate that the vast majority of the scale here is 
+attributable to the first eigenvector which is an overall storm intensity vector
+with few areas of distinction. The remaining eigenvectors appear to split up the
+storm into the different regions. Of note is Mt. Rainier in the southern portion
+of the map. It is apparent that the mountain regularly sees different rainfall 
+than the surrounding regions in large storms. 
 
+Another way to look at the proportional scales of the eigenvalues is to use a 
+scree-plot:
 
-*****I SHOULD MAKE A FUNCTION THAT CREATES A GRID OF STORM RECONSTRUCTION PLOTS WITH 
-DEFAULT CHOSEN EIGENVECTORS BUT ALSO ALLOW THE USER TO INPUT THIS. 
+```{r "pnw_scree", fig.width=6, fig.height=2.5}
+plot_scree(eigen_vals = eigen_tpdm$values)
+```
+
+While this may suggest that a single eigenvector is enough, a storm
+reconstruction demonstrates that we need several eigenvectors to get the finer
+scale features we expect in an extreme storm:
 
 
 ```{r "storm reconstruction", fig.width = 9, fig.height = 5}
 storm_totals <- rowSums(precip_alpha2)
-max_rain <- which.max(storm_totals)
+max_rain <- which.max(storm_totals) # find the biggest storm
 
-storm_ind <- which(dates== "20210112")
-storm_plots <- list()
-storm_totals[c(max_rain, storm_ind)]
-storm_ind <- max_rain
+storm_plots <- plot_reconstruction(data = precip_alpha2, 
+                                   storm_ind = max_rain, 
+                                   dates = dates, 
+                                   lat = lat_lon$lat, 
+                                   lon = lat_lon$lon, 
+                                   eigenvectors = eigen_tpdm$vectors,
+                                   eigenvalues = eigen_tpdm$values, 
+                                   reconstruction_inds = c(1, 2, 5, 100, 1000))
 
-# look at storm 
-temp_plot <- plot_sf(precip_alpha2[storm_ind, ], 
-                     plot_title = "storm_20071203", 
-                     lat = lat_lon$lat, 
-                     lon = lat_lon$lon)
-plot(temp_plot)
-
-jan_12 <- precip_alpha2[storm_ind, ]
-
-jan_12_pcs <- get_pcs(data_vec = jan_12, eigenvecs = eigen_tpdm$vectors)
-
-total_scale <- sum(eigen_tpdm$values)
-partial_scale <- cumsum(eigen_tpdm$values)
-prop_scale <- round(partial_scale/total_scale, 3)
-
-storm_plots[[1]] <- plot_sf(jan_12, 
-                            plot_title = "Historical Storm", 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon) + 
-  ggplot2::labs(subtitle = "December 3, 2007")
-storm_plots[[2]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 1), 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon,
-                            plot_title = "1 Eigenvector") + 
-  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[1]))
-storm_plots[[3]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 5), 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon,
-                            plot_title = "5 Eigenvectors") + 
-  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[5]))
-storm_plots[[4]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 20), 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon,
-                            plot_title = "20 Eigenvectors") + 
-  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[20]))
-storm_plots[[5]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 100), 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon,
-                            plot_title = "100 Eigenvectors") + 
-  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[100]))
-storm_plots[[6]] <- plot_sf(reconstruct_data(jan_12_pcs, eigen_tpdm$vectors, 1000), 
-                            lat = lat_lon$lat, 
-                            lon = lat_lon$lon,
-                            plot_title = "1000 Eigenvectors") + 
-  ggplot2::labs(subtitle = paste0("Proportion of scale: ", prop_scale[1000]))
-
-
-
-# pdf("./reconstructed_storm_20211112.pdf", height = 10, width = 7.5)
 cowplot::plot_grid(plotlist = storm_plots, nrow = 2, ncol = 3, align = "hv")
 ```
 
-
+We note that using five of the `r length(eigen_tpdm$values)` eigenvectors 
+gives a pretty good map of the storm but that there are some finer scale 
+features that don't show up unless we use many eigenvectors. 
 
 
 ```{r "PC_time_series", fig.height=5, fig.width=9}
@@ -140,3 +111,4 @@ ts_plots <- lapply(c(1:6), get_ts_plot,
 
 cowplot::plot_grid(plotlist = ts_plots, nrow = 2, ncol = 3, align = "hv")
 ```
+We note that these time series plots have missing values as we only downloaded  observations for the winter. 

@@ -76,8 +76,8 @@ make_pd <- function(x){
 #' plot1 <- plot_eigen_map(1,
 #'                         eigen_vecs = myEigen$vectors,
 #'                         eigen_vals = myEigen$values,
-#'                         lat = 1:25,
-#'                         lon = 1:25)
+#'                         lat = 1:5,
+#'                         lon = 1)
 #' plot1
 plot_eigen_map <- function(eigen_num,
                            eigen_vecs,
@@ -98,6 +98,7 @@ plot_eigen_map <- function(eigen_num,
         ggplot2::scale_color_viridis_c(limits = scale_lims) +
         ggplot2::labs(title = paste0("Map of Eigenvector ", eigen_num),
              subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
+        ggplot2::theme_minimal() +
         ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
     }
     plot1 <- ggplot2::ggplot(my_sf) +
@@ -105,6 +106,7 @@ plot_eigen_map <- function(eigen_num,
       ggplot2::scale_color_viridis_c("limits = c(-0.037, 0.037)") +
       ggplot2::labs(title = paste0("Map of Eigenvector ", eigen_num),
            subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
+      ggplot2::theme_minimal() +
       ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
   } else {
     plot1 <- ggplot2::ggplot(my_sf) +
@@ -112,6 +114,7 @@ plot_eigen_map <- function(eigen_num,
       ggplot2::scale_color_viridis_c() +
       ggplot2::labs(title = paste0("Map of Eigenvector ", eigen_num),
            subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
+      ggplot2::theme_minimal() +
       ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
   }
   return(plot1)
@@ -322,7 +325,79 @@ plot_sf <- function(data, plot_title, lat, lon){
     ggplot2::geom_sf(ggplot2::aes(col = value), shape = 15, size = 2) +
     ggplot2::scale_color_viridis_c() +
     ggplot2::labs(title = plot_title) +
+    ggplot2::theme_minimal() +
     ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
+}
+
+
+#' Create plots for storm reconstruction with differing numbers of eigenvectors
+#'
+#' This function is a wrapper on the `plot_sf()` function which outputs a `list`
+#'    of `ggplot2` objects. The first plot is the historical storm. The
+#'    following plots are partial storm reconstructions using
+#'    `reconstruction_inds` eigenvectors.
+#'
+#' @param data The data `matrix`
+#' @param storm_ind The index of the large storm day
+#' @param dates The `vector` of `dates`
+#' @param lat the `vector` of latitudes
+#' @param lon the `vector` of longitudes
+#' @param eigenvectors the `matrix` of eigenvectors
+#' @param eigenvalues the `vector` of eigenvalues
+#' @param reconstruction_inds a `vector` of the number of eigenvectors you want
+#'    used in a partial reconstruction (e.g., c(1, 5) would create a partial
+#'    reconstruction with 1 eigenvector and a second with 5 eigenvectors).
+#'    (default is `c(1, 2, 5, 20, 100)`).
+#'
+#' @returns a `list` of `ggplot2` objects
+#' @export
+#'
+#' @examples
+#' myData <- matrix(evd::rfrechet(600, shape = 2), ncol = 6)
+#' myTPDM <- tpd(myData)
+#' myEigen <- get_eigen(myTPDM)
+#' out <- plot_reconstruction(data = myData,
+#'                            storm_ind = 2,
+#'                            dates = 1:125,
+#'                            lat = 1:2,
+#'                            lon = 1:3,
+#'                            eigenvectors = myEigen$vectors,
+#'                            eigenvalues = myEigen$values,
+#'                            reconstruction_inds = c(1,2,3))
+#' cowplot::plot_grid(plotlist = out, nrow = 2)
+plot_reconstruction <- function(data,
+                                storm_ind,
+                                dates,
+                                lat,
+                                lon,
+                                eigenvectors,
+                                eigenvalues,
+                                reconstruction_inds = c(1, 2, 5, 20, 100)){
+  plots <- list()
+  prop_scale <- cumsum(eigenvalues)/sum(eigenvalues)
+  prop_scale <- round(prop_scale, 3)
+  storm_pcs <- get_pcs(data_vec = data[storm_ind, ],
+                       eigenvecs = eigenvectors)
+  plots[[1]] <- plot_sf(data[storm_ind, ],
+                        plot_title = "Historical Storm",
+                        lat = lat,
+                        lon = lon) +
+    ggplot2::labs(subtitle = dates[storm_ind])
+
+  k = 1
+  for(i in seq_along(reconstruction_inds)){
+    k = k + 1
+    plots[[k]] <-  plot_sf(reconstruct_data(storm_pcs,
+                                            eigenvectors,
+                                            reconstruction_inds[i]),
+                           lat = lat,
+                           lon = lon,
+                           plot_title = paste0(reconstruction_inds[i],
+                                               " Eigenvectors")) +
+      ggplot2::labs(subtitle = paste0("Scale prop: ",
+                                      prop_scale[reconstruction_inds[i]]))
+  }
+  return(plots)
 }
 
 
@@ -379,7 +454,7 @@ get_ts_plot <- function(eigen_num,
   ts_vec <- data %*% eigen_vecs[,eigen_num]
   temp_df <- data.frame("Date" = dates,
                         "PC_Score" = ts_vec,
-                        "x_index" = 1:length(dates))
+                        "x_index" = 1:dim(data)[1])
 
   if(!is(dates, "Date")){
     temp_plot <- ggplot2::ggplot(temp_df,
@@ -388,6 +463,7 @@ get_ts_plot <- function(eigen_num,
       ggplot2::ylab("PC Score") +
       ggplot2::xlab("Date") +
       ggplot2::labs(title = paste0("Principle Component ", eigen_num)) +
+      ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 30))
   } else {
     temp_plot <- ggplot2::ggplot(temp_df,
@@ -399,6 +475,7 @@ get_ts_plot <- function(eigen_num,
       #                    label = substr(temp_df$Date[x_ticks], start = 1,
       #                                   stop = 4)[seq(5, 40, length.out = 8)]) +
       ggplot2::labs(title = paste0("Principle Component ", eigen_num)) +
+      ggplot2::theme_minimal() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 30))
   }
 

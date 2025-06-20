@@ -47,7 +47,7 @@ myEigen <- get_eigen(myTPDM)
 plot1 <- plot_eigen_map(1,
                         eigen_vecs = myEigen$vectors,
                         eigen_vals = myEigen$values,
-                        lat = 1:25,
-                        lon = 1:25)
+                        lat = 1:5,
+                        lon = 1)
 plot1
 }

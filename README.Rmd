@@ -28,6 +28,12 @@ ARMA time series models. We implement these extremal analysis pipelines in this
 R package 'tpdmethods'. The package includes datasets and vignettes for 
 precipitation and fire weather analyses. 
 
+%
+%
+%
+%
+%
+
 ## Installation
 
 You can install the development version of tpdmethods from [GitHub](https://github.com/) with:
@@ -36,6 +42,12 @@ You can install the development version of tpdmethods from [GitHub](https://gith
 # install.packages("pak") # pak is a method to download packages from a variety of sources.
 pak::pak("twixson/tpdmethods")
 ```
+
+%
+%
+%
+%
+%
 
 ## Example 1: Time Series - Fire Weather
 
@@ -53,7 +65,7 @@ a matrix with 153 rows for the days in the fire season and 20 columns for the
 years.
 
 
-```{r 'plot_2020', fig.height=3, fig.width=7}
+```{r 'plot_2020', fig.height=2.5, fig.width=7}
 library(tpdmethods)
 par(mar = c(4, 4, 2, 1) + 0.1)
 plot(fire_weather_present[,15], 
@@ -70,7 +82,7 @@ Fréchet($2$) margins we will use `matrix_as_seasons = TRUE` and
 because we are performing a time series analysis but other uses of the package
 will ignore this. 
 
-```{r 'estimate_tpd'}
+```{r 'estimate_tpd', fig.height=2.5, fig.width=7}
 fw_tpd_present <- tpd(fire_weather_present, 
                       max_lag = 30, 
                       trans_marginal = FALSE, 
@@ -89,7 +101,7 @@ moving average (TL-MA) model up to order `q = 20`. We will visually compare the
 plot of the fitted TPD function to the empirical TPD function to determine which
 model to retain. 
 
-```{r 'fit_MAs', fig.height=3, fig.width=7}
+```{r 'fit_MAs', fig.height=2.5, fig.width=7}
 set.seed(1982374)
 model_coefs_present <- innovations(fw_tpd_present, max_q = 20)
 fitted_model_tpdf <- maq_tpdf(model_coefs_present[[1]][15,], max_lag = 30)
@@ -196,6 +208,12 @@ This brief example demonstrated a few of the key functions:
     Fréchet($2$). 
 
 
+%
+%
+%
+%
+%
+
 ## Example 2: Principal Components Analysis - Financial Data
 
 In this second breif example we will explore the extremes analogue to principal
@@ -228,7 +246,7 @@ Now that we have the eigen decomposition of the TPDM we can try to interpret
 the eigenvectors and eigenvalues using some plots. Our first plot is a scree 
 plot which demonstrates how important the first eigenvalue is. We include this plot twice to show that the `normalize` argument only changes the scale. 
 
-```{r 'scree', fig.height=3, fig.width=7}
+```{r 'scree', fig.height=2.5, fig.width=7}
 p1 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = TRUE)
 p2 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = FALSE)
 cowplot::plot_grid(p1, p2, ncol = 2)
@@ -236,7 +254,7 @@ cowplot::plot_grid(p1, p2, ncol = 2)
 
 The next plot looks at the eigenvector loadings.
 
-```{r 'eigen_plot', fig.height=3, fig.width=7}
+```{r 'eigen_plot', fig.height=2.5, fig.width=7}
 plot_eigen(eigen_tpdm$vectors, 
            num_vecs = 5, 
            var_names = colnames(financial_data[-c(1)]))
@@ -253,7 +271,7 @@ like autos, books, etc.
 In addition to these plots, we can make time series plots for a few principal 
 components. 
 
-```{r 'time_series_plots', fig.height=7, fig.width=7}
+```{r 'time_series_plots', fig.height=6, fig.width=7}
 dates <- as.Date(as.character(financial_data[,1]), "%Y%m%d")
 ts1_plot <- get_ts_plot(eigen_num = 1, 
                         eigen_vecs = eigen_tpdm$vectors, 
@@ -314,7 +332,13 @@ In this brief example we demonstrated a few of the key PCA analogue functions:
 * `get_ts_plot()` - for creating a time series plot of a principal component. 
 * `get_pc_ts()` - for getting the principal component time series for further
     investigation. 
-    
+
+%
+%
+%
+%
+%
+
 ## Conclusion
 
 This `tpdmethods` package is under active development. We have plans to 
