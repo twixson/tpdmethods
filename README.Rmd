@@ -28,11 +28,6 @@ ARMA time series models. We implement these extremal analysis pipelines in this
 R package 'tpdmethods'. The package includes datasets and vignettes for 
 precipitation and fire weather analyses. 
 
-%
-%
-%
-%
-%
 
 ## Installation
 
@@ -44,9 +39,13 @@ pak::pak("twixson/tpdmethods")
 ```
 
 %
+
 %
+
 %
+
 %
+
 %
 
 ## Example 1: Time Series - Fire Weather
@@ -209,9 +208,13 @@ This brief example demonstrated a few of the key functions:
 
 
 %
+
 %
+
 %
+
 %
+
 %
 
 ## Example 2: Principal Components Analysis - Financial Data
@@ -334,9 +337,13 @@ In this brief example we demonstrated a few of the key PCA analogue functions:
     investigation. 
 
 %
+
 %
+
 %
+
 %
+
 %
 
 ## Conclusion
