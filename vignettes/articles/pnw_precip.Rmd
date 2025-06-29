@@ -47,6 +47,7 @@ eigen_plots <- lapply(1:8, plot_eigen_map,
                       eigen_vals = eigen_tpdm$values, 
                       lat = lat_lon$lat, 
                       lon = lat_lon$lon)
+
 cowplot::plot_grid(plotlist = eigen_plots, nrow = 2, ncol = 2, align = "hv")
 ```
 

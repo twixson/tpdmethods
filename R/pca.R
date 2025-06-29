@@ -100,14 +100,15 @@ plot_eigen_map <- function(eigen_num,
              subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
         ggplot2::theme_minimal() +
         ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
-    }
+    } else {
     plot1 <- ggplot2::ggplot(my_sf) +
       ggplot2::geom_sf(ggplot2::aes(col = eigen), shape = 15, size = 2) +
-      ggplot2::scale_color_viridis_c("limits = c(-0.037, 0.037)") +
+      ggplot2::scale_color_viridis_c(limits = c(-0.037, 0.037)) +
       ggplot2::labs(title = paste0("Map of Eigenvector ", eigen_num),
            subtitle = paste0("Eigenvalue = ", round(eigen_vals[eigen_num], 2))) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text = ggplot2::element_text(angle = 45))
+    }
   } else {
     plot1 <- ggplot2::ggplot(my_sf) +
       ggplot2::geom_sf(ggplot2::aes(col = eigen), shape = 15, size = 2) +
@@ -141,7 +142,10 @@ plot_eigen_map <- function(eigen_num,
 #' myTPDM <- tpd(myData)
 #' myEigen <- get_eigen(myTPDM)
 #' out <- plot_eigen(myEigen$vectors, num_vecs = 3, var_names = 1:5)
-plot_eigen <- function(eigen_vecs, num_vecs = 5, var_names){
+plot_eigen <- function(eigen_vecs, num_vecs = 5, var_names = NULL){
+  if(is.null(var_names)){
+    var_names <- 1:(dim(eigen_vecs)[2])
+  }
   max_lim <- max(abs(eigen_vecs)) + 0.001
   mbreaks <- round(seq(-max_lim, max_lim, length.out = 10), 2)[-c(1, 10)]
 

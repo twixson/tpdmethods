@@ -166,10 +166,13 @@ RV FWI data.
 ```{r 'generate_seasons'}
 set.seed(2389098)
 temp_present <- gen_maq(n = 153*1000, 
-                        thetas = model_coefs_present[[1]][15,1:15])
+                        thetas = model_coefs_present[[1]][15,1:15]) 
 seasons_present <- 
   matrix(transform_marginal(temp_present, fix_gpd_params = TRUE, gpd_shape = 0.5), 
          ncol = 1000)
+# bias correction to match pre-processed FWI data on RV margins. 
+seasons_present <- seasons_present - mean(seasons_present)
+seasons_present <- ifelse(seasons_present < 0, 0, temp_present)
 ```
 
 Now that we have generated 1000 seasons lets repeat the above exercise and 
@@ -229,7 +232,7 @@ found in `Industry_definitions.txt`.
 We begin by estimating the TPD matrix (TPDM): 
 
 ```{r 'pca_tpd'}
-tpdm <- tpd(as.matrix(financial_data[,-c(1)]))
+tpdm <- tpd(as.matrix(-financial_data[,-1]))
 ```
 
 The TPDM is an extremes analogue to the covariance matrix and it shares many 
@@ -260,7 +263,7 @@ The next plot looks at the eigenvector loadings.
 ```{r 'eigen_plot', fig.height=2.5, fig.width=7}
 plot_eigen(eigen_tpdm$vectors, 
            num_vecs = 5, 
-           var_names = colnames(financial_data[-c(1)]))
+           var_names = colnames(financial_data[-1]))
 ```
 
 This plot shows that the first (and by-far most important) eigenvector
@@ -270,6 +273,38 @@ distinguish between sub-components of the financial market. The second
 eigenvector suggests that the beer, food, health, household, and smoke sectors 
 of the market tend to have less extreme losses than more discretionary items 
 like autos, books, etc. 
+
+If we believe that the data are tail-equivalaent the we can perform a similar 
+PCA for the covariance analogue (rather than the correlation analogue) by 
+setting `trans_marginal = FALSE`. The default setting computes the radial
+components of the pseudo-polar decomposition pairwise. This is more sensible if
+we expect the most extreme events to be local (e.g., rainfall). When we expect
+large events to occur globally it makes sense to compute the radii as a norm 
+across the whole vector. This is done with `vector_norm = TRUE`. 
+
+```{r "cov_analogue"}
+tpdm_cov <- tpd(as.matrix(-financial_data[,-1]), 
+                trans_marginal = FALSE, 
+                vector_norm = TRUE)
+eigen_cov <- get_eigen(tpdm_cov, make_pd = TRUE)
+plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
+```
+
+Note the differences between these two sets of eigenvectors (e.g., look at the 
+"coal" sector). A primary reason for this is the differences in scale which is 
+obscured in the correlation-analogue set of eigenvectors because we fix the 
+scales at 1 in that case.
+
+```{r "scale_differences"}
+# correlation analogue
+head(sort(diag(tpdm), decreasing = TRUE))
+
+# covariance analogue
+head(sort(diag(tpdm_cov), decreasing = TRUE))
+colnames(financial_data[-1])[order(diag(tpdm_cov))[30:25]]
+```
+
+
 
 In addition to these plots, we can make time series plots for a few principal 
 components. 

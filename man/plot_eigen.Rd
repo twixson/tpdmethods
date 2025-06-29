@@ -4,7 +4,7 @@
 \alias{plot_eigen}
 \title{Create a plot of several eigenvectors.}
 \usage{
-plot_eigen(eigen_vecs, num_vecs = 5, var_names)
+plot_eigen(eigen_vecs, num_vecs = 5, var_names = NULL)
 }
 \arguments{
 \item{eigen_vecs}{The \code{matrix} of eigenvectors.}

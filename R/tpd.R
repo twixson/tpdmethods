@@ -31,6 +31,10 @@
 #'    as a matrix with columns representing plausibly iid replicates (e.g.,
 #'    seasons). This protects against lagging across seasons. (default is
 #'    `FALSE`)
+#' @param vector_norm change to `TRUE` to perform the pseudo-polar decomposition
+#'    using the full vector-norm for the radial components rather than the
+#'    pairwise norm. This functionality is limited at present. (default
+#'    is `TRUE`)
 #' @param verbose change to `FALSE` if you do not want to see comments.
 #'    (default is `TRUE`)
 #'
@@ -57,113 +61,161 @@ tpd <- function(data,
                 trans_marginal = TRUE,
                 marginal_thresh = 0.975,
                 matrix_as_seasons = FALSE,
+                vector_norm = FALSE,
                 verbose = TRUE){
 
-  if(matrix_as_seasons == TRUE){
+  if(vector_norm == TRUE){
+    if(trans_marginal == TRUE){
+      stop("trans_marginal == TRUE and vector_norm == TRUE: we're working on it")
+    }
     if(is.matrix(data)){
-      n_seasons <- dim(data)[2]
-      if(verbose == TRUE){
-        print(paste0("Assuming this is a time series with ", n_seasons,
-                     " seasons."))
+      if(min(dim(data)) < 2){
+        stop("!#!#! Matrix dimension too small, try using a vector !#!#!")
+      }
+      if(dim(data)[1] == 2){
+        data <- t(data)
+      }
+      if(dim(data)[2] == 2){
+        tpds <- tpd.once(data,
+                         radial_quantile = radial_quantile,
+                         radial_thresh = radial_thresh,
+                         get_large = get_large,
+                         trans_marginal = trans_marginal,
+                         marginal_thresh = marginal_thresh)
+      } else {
+        if(verbose == TRUE){
+          print("Matrix input, we assume rows represent replicates")
+          print(". . . and columns represent variables.")}
+        d <- dim(data)[2] # dimension of the problem (e.g., number of stations)
+        tpds <- matrix(1, nrow = d, ncol = d)
+        radii <- apply(data, 1, function(x){sqrt(sum(x^2))})
+        radial_cutoff <- max(radial_thresh,
+                             unname(stats::quantile(radii,
+                                                    probs = radial_quantile)))
+        large_obs <- which(radii > radial_cutoff)
+        data      <- data[large_obs, ] / radii[large_obs]
+        tictoc::tic(paste0("finished 100 of ", d, " rows of the TPDM"))
+        for(j in 1:d){
+          for(k in j:d){
+            tpds[j, k] <- sum(data[,j] * data[,k]) / length(large_obs)
+            tpds[k, j] <- tpds[j, k]
+          }
+          if(j %% 100 == 0){
+            tictoc::toc()
+            tictoc::tic(paste0("finished ", j+100, " of ", d, " rows of the TPDM"))
+          }
         }
+      }
+    } else {
+      stop("vector_norm = TRUE but not a matrix: we're working on it")
+    }
+  } else { # Normalize pairwise instead
+    if(matrix_as_seasons == TRUE){
+      if(is.matrix(data)){
+        n_seasons <- dim(data)[2]
+        if(verbose == TRUE){
+          print(paste0("Assuming this is a time series with ", n_seasons,
+                       " seasons."))
+          }
+        tpds <- numeric(max_lag + 1)
+        tpds[1] <- 1
+        n_each <- dim(data)[1] # length of each season
+        for(i in 1:max_lag){
+          lagged_data <- matrix(NA, ncol = 2, nrow = n_seasons * (n_each - i))
+          for(j in 1:n_seasons){ # lag within seasons
+            lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 1] <-
+              data[1:(n_each - i), j]
+            lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 2] <-
+              data[(1 + i):n_each, j]
+          }
+          tpds[i + 1] <- tpd.once(lagged_data, # tpd on bivariate matrix
+                                  radial_quantile = radial_quantile,
+                                  radial_thresh = radial_thresh,
+                                  get_large = get_large,
+                                  trans_marginal = trans_marginal,
+                                  marginal_thresh = marginal_thresh)
+        }
+      } else {
+        stop("!#!#! matrix_as_seasons is TRUE but object is not a matrix !#!#!")
+      }
+    } else if(is.matrix(data)){
+      if(min(dim(data)) < 2){
+        stop("!#!#! Matrix dimension too small, try using a vector !#!#!")
+      }
+      if(dim(data)[1] == 2){
+        data <- t(data)
+      }
+      if(dim(data)[2] == 2){
+        tpds <- tpd.once(data,
+                         radial_quantile = radial_quantile,
+                         radial_thresh = radial_thresh,
+                         get_large = get_large,
+                         trans_marginal = trans_marginal,
+                         marginal_thresh = marginal_thresh)
+      } else {
+        if(verbose == TRUE){
+          print("Matrix input, we assume rows represent replicates")
+          print(". . . and columns represent variables.")}
+        d <- dim(data)[2] # dimension of the problem (e.g., number of stations)
+        tpds <- matrix(1, nrow = d, ncol = d)
+        tictoc::tic(paste0("finished 100 of ", d, " rows of the TPDM"))
+        for(j in 1:(d - 1)){
+          for(k in (j+1):d){
+            temp_data <- data[, c(j,k)]
+            tpds[j, k] <- tpd.once(temp_data,
+                                   radial_quantile = radial_quantile,
+                                   radial_thresh = radial_thresh,
+                                   get_large = get_large,
+                                   trans_marginal = trans_marginal,
+                                   marginal_thresh = marginal_thresh)
+            tpds[k, j] <- tpds[j, k]
+          }
+          if(j %% 100 == 0){
+            tictoc::toc()
+            tictoc::tic(paste0("finished ", j+100, " of ", d, " rows of the TPDM"))
+          }
+        }
+      }
+    } else if(is.vector(data)){
+      if(verbose == TRUE){print("Vector input, we assume this is a time series")}
       tpds <- numeric(max_lag + 1)
       tpds[1] <- 1
-      n_each <- dim(data)[1] # length of each season
+      n <- length(data)
       for(i in 1:max_lag){
-        lagged_data <- matrix(NA, ncol = 2, nrow = n_seasons * (n_each - i))
-        for(j in 1:n_seasons){ # lag within seasons
-          lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 1] <-
-            data[1:(n_each - i), j]
-          lagged_data[((j-1)*(n_each-i) + 1):(j*(n_each-i)), 2] <-
-            data[(1 + i):n_each, j]
-        }
-        tpds[i + 1] <- tpd.once(lagged_data, # tpd on bivariate matrix
+        temp_data <- matrix(NA, nrow = n - i, ncol = 2)
+        temp_data[,1] <- data[1:(n - i)]
+        temp_data[,2] <- data[(1 + i):n]
+        tpds[i + 1] <- tpd.once(temp_data,
                                 radial_quantile = radial_quantile,
                                 radial_thresh = radial_thresh,
                                 get_large = get_large,
                                 trans_marginal = trans_marginal,
                                 marginal_thresh = marginal_thresh)
       }
-    } else {
-      stop("!#!#! matrix_as_seasons is TRUE but object is not a matrix !#!#!")
-    }
-  } else if(is.matrix(data)){
-    if(min(dim(data)) < 2){
-      stop("!#!#! Matrix dimension too small, try using a vector !#!#!")
-    }
-    if(dim(data)[1] == 2){
-      data <- t(data)
-    }
-    if(dim(data)[2] == 2){
-      tpds <- tpd.once(data,
-                       radial_quantile = radial_quantile,
-                       radial_thresh = radial_thresh,
-                       get_large = get_large,
-                       trans_marginal = trans_marginal,
-                       marginal_thresh = marginal_thresh)
-    } else {
-      if(verbose == TRUE){
-        print("Matrix input, we assume rows represent replicates")
-        print(". . . and columns represent variables.")}
-      d <- dim(data)[2] # dimension of the problem (e.g., number of stations)
-      tpds <- matrix(1, nrow = d, ncol = d)
-      tictoc::tic(paste0("finished 100 of ", d, " rows of the TPDM"))
-      for(j in 1:(d - 1)){
-        for(k in (j+1):d){
-          temp_data <- data[, c(j,k)]
-          tpds[j, k] <- tpd.once(temp_data,
-                                 radial_quantile = radial_quantile,
-                                 radial_thresh = radial_thresh,
-                                 get_large = get_large,
-                                 trans_marginal = trans_marginal,
-                                 marginal_thresh = marginal_thresh)
-          tpds[k, j] <- tpds[j, k]
-        }
-        if(j %% 100 == 0){
-          tictoc::toc()
-          tictoc::tic(paste0("finished ", j+100, " of ", d, " rows of the TPDM"))
-        }
-      }
-    }
-  } else if(is.vector(data)){
-    if(verbose == TRUE){print("Vector input, we assume this is a time series")}
-    tpds <- numeric(max_lag + 1)
-    tpds[1] <- 1
-    n <- length(data)
-    for(i in 1:max_lag){
-      temp_data <- matrix(NA, nrow = n - i, ncol = 2)
-      temp_data[,1] <- data[1:(n - i)]
-      temp_data[,2] <- data[(1 + i):n]
-      tpds[i + 1] <- tpd.once(temp_data,
-                              radial_quantile = radial_quantile,
-                              radial_thresh = radial_thresh,
-                              get_large = get_large,
-                              trans_marginal = trans_marginal,
-                              marginal_thresh = marginal_thresh)
-    }
-  } else if(is.list(data)){
-   all_same_class <- all(sapply(data,
-                                function(x){class(x) == class(data[[1]])}))
-   all_same_dimension <- all(sapply(data,
-                                    function(x){dim(x) == dim(data[[1]])}))
-   if(all_same_class & all_same_dimension){
-     if(dim(data[[1]])[1] == 2){
-       data <- lapply(data, function(x){t(x)}) # transpose list objects
-     }
-     if(dim(data[[1]])[2] == 2){
-       tpds <- sapply(data,
-                      FUN = tpd.once,
-                      radial_quantile = radial_quantile,
-                      radial_thresh = radial_thresh,
-                      get_large = get_large,
-                      trans_marginal = trans_marginal,
-                      marginal_thresh = marginal_thresh)
+    } else if(is.list(data)){
+     all_same_class <- all(sapply(data,
+                                  function(x){class(x) == class(data[[1]])}))
+     all_same_dimension <- all(sapply(data,
+                                      function(x){dim(x) == dim(data[[1]])}))
+     if(all_same_class & all_same_dimension){
+       if(dim(data[[1]])[1] == 2){
+         data <- lapply(data, function(x){t(x)}) # transpose list objects
+       }
+       if(dim(data[[1]])[2] == 2){
+         tpds <- sapply(data,
+                        FUN = tpd.once,
+                        radial_quantile = radial_quantile,
+                        radial_thresh = radial_thresh,
+                        get_large = get_large,
+                        trans_marginal = trans_marginal,
+                        marginal_thresh = marginal_thresh)
+       } else {
+         stop("!#!#! Objects in list are not bivariate !#!#!")
+       }
      } else {
-       stop("!#!#! Objects in list are not bivariate !#!#!")
+       stop("!#!#! Objects in list are different types or sizes !#!#!")
      }
-   } else {
-     stop("!#!#! Objects in list are different types or sizes !#!#!")
-   }
+    }
   }
   return(tpds)
 }

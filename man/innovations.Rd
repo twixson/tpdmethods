@@ -15,10 +15,10 @@ desired order or some other large value to see when the estimates
 stabilize.}
 }
 \value{
-a \code{list} with two components. The first component \code{out[[1]]}  is a
+a \code{list} with two components. The first component \code{coefs}  is a
 \code{matrix} of innovations-estimated coefficients. The \code{n}th row contains
-coefficients for the TL-MA(\code{n}). The second component \code{out[[2]]} is a
-vector of \code{nu} values from the innovations algorith.
+coefficients for the TL-MA(\code{n}). The second component \code{nus} is a
+vector of \code{nu} values from the innovations algorithm.
 }
 \description{
 This function estimates TL-MA(q) coefficients using the extremes-analogue

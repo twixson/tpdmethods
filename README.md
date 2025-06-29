@@ -4,7 +4,6 @@
 # tpdmethods
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
 The goal of tpdmethods is to make TPD-based methods accessible to more
@@ -171,10 +170,13 @@ can compare to the observed RV FWI data.
 ``` r
 set.seed(2389098)
 temp_present <- gen_maq(n = 153*1000, 
-                        thetas = model_coefs_present[[1]][15,1:15])
+                        thetas = model_coefs_present[[1]][15,1:15]) 
 seasons_present <- 
   matrix(transform_marginal(temp_present, fix_gpd_params = TRUE, gpd_shape = 0.5), 
          ncol = 1000)
+# bias correction to match pre-processed FWI data on RV margins. 
+seasons_present <- seasons_present - mean(seasons_present)
+seasons_present <- ifelse(seasons_present < 0, 0, temp_present)
 ```
 
 Now that we have generated 1000 seasons lets repeat the above exercise
@@ -198,9 +200,9 @@ generated_confints <- apply(above_generated, 1, function(x){
 rownames(generated_confints) <- c("mean", "lower", "upper")
 round(generated_confints, 4)
 #>        2-day  3-day  5-day 10-day
-#> mean  0.3630 0.1430 0.0520 0.0110
-#> lower 0.3266 0.1205 0.0388 0.0055
-#> upper 0.4023 0.1685 0.0682 0.0197
+#> mean  0.3630 0.1420 0.0520 0.0110
+#> lower 0.3266 0.1196 0.0388 0.0055
+#> upper 0.4023 0.1674 0.0682 0.0197
 ```
 
 Note the broad agreement between our data and the fitted model.
@@ -238,7 +240,7 @@ French Data Library. These data are included in the package as
 We begin by estimating the TPD matrix (TPDM):
 
 ``` r
-tpdm <- tpd(as.matrix(financial_data[,-c(1)]))
+tpdm <- tpd(as.matrix(-financial_data[,-1]))
 #> [1] "Matrix input, we assume rows represent replicates"
 #> [1] ". . . and columns represent variables."
 ```
@@ -276,7 +278,7 @@ The next plot looks at the eigenvector loadings.
 ``` r
 plot_eigen(eigen_tpdm$vectors, 
            num_vecs = 5, 
-           var_names = colnames(financial_data[-c(1)]))
+           var_names = colnames(financial_data[-1]))
 ```
 
 <img src="man/figures/README-eigen_plot-1.png" width="100%" />
@@ -288,6 +290,44 @@ next eigenvalues distinguish between sub-components of the financial
 market. The second eigenvector suggests that the beer, food, health,
 household, and smoke sectors of the market tend to have less extreme
 losses than more discretionary items like autos, books, etc.
+
+If we believe that the data are tail-equivalaent the we can perform a
+similar PCA for the covariance analogue (rather than the correlation
+analogue) by setting `trans_marginal = FALSE`. The default setting
+computes the radial components of the pseudo-polar decomposition
+pairwise. This is more sensible if we expect the most extreme events to
+be local (e.g., rainfall). When we expect large events to occur globally
+it makes sense to compute the radii as a norm across the whole vector.
+This is done with `vector_norm = TRUE`.
+
+``` r
+tpdm_cov <- tpd(as.matrix(-financial_data[,-1]), 
+                trans_marginal = FALSE, 
+                vector_norm = TRUE)
+#> [1] "Matrix input, we assume rows represent replicates"
+#> [1] ". . . and columns represent variables."
+eigen_cov <- get_eigen(tpdm_cov, make_pd = TRUE)
+plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
+```
+
+<img src="man/figures/README-cov_analogue-1.png" width="100%" />
+
+Note the differences between these two sets of eigenvectors (e.g., look
+at the “coal” sector). A primary reason for this is the differences in
+scale which is obscured in the correlation-analogue set of eigenvectors
+because we fix the scales at 1 in that case.
+
+``` r
+# correlation analogue
+head(sort(diag(tpdm), decreasing = TRUE))
+#> [1] 1 1 1 1 1 1
+
+# covariance analogue
+head(sort(diag(tpdm_cov), decreasing = TRUE))
+#> [1] 0.09969235 0.05806403 0.05027953 0.04511340 0.04400824 0.04161088
+colnames(financial_data[-1])[order(diag(tpdm_cov))[30:25]]
+#> [1] "Coal"  "Steel" "Txtls" "Autos" "BusEq" "Games"
+```
 
 In addition to these plots, we can make time series plots for a few
 principal components.

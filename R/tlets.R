@@ -12,10 +12,10 @@
 #'    desired order or some other large value to see when the estimates
 #'    stabilize.
 #'
-#' @returns a `list` with two components. The first component `out[[1]]`  is a
+#' @returns a `list` with two components. The first component `coefs`  is a
 #'    `matrix` of innovations-estimated coefficients. The `n`th row contains
-#'    coefficients for the TL-MA(`n`). The second component `out[[2]]` is a
-#'    vector of `nu` values from the innovations algorith.
+#'    coefficients for the TL-MA(`n`). The second component `nus` is a
+#'    vector of `nu` values from the innovations algorithm.
 #' @export
 #'
 #' @importFrom Rdpack reprompt
@@ -44,8 +44,8 @@ innovations <- function(tpdf, max_q =50){
     nu[n+1] <- tpdf[1]
     for(l in 0:(n-1)){nu[n+1] <- nu[n+1] - theta_hat[n, n-l]^2*nu[l+1]}}
   results <- list()
-  results[[1]] <- theta_hat
-  results[[2]] <- nu
+  results$coefs <- theta_hat
+  results$nus <- nu
   return(results)
 }
 

@@ -13,6 +13,7 @@ tpd(
   trans_marginal = TRUE,
   marginal_thresh = 0.975,
   matrix_as_seasons = FALSE,
+  vector_norm = FALSE,
   verbose = TRUE
 )
 }
@@ -47,6 +48,11 @@ GPD components in the marginal transformation. (default is 0.975)}
 as a matrix with columns representing plausibly iid replicates (e.g.,
 seasons). This protects against lagging across seasons. (default is
 \code{FALSE})}
+
+\item{vector_norm}{change to \code{TRUE} to perform the pseudo-polar decomposition
+using the full vector-norm for the radial components rather than the
+pairwise norm. This functionality is limited at present. (default
+is \code{TRUE})}
 
 \item{verbose}{change to \code{FALSE} if you do not want to see comments.
 (default is \code{TRUE})}
