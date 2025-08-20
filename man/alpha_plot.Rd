@@ -4,7 +4,7 @@
 \alias{alpha_plot}
 \title{Create a plot of confidence intervals for alpha from each variable (station)}
 \usage{
-alpha_plot(data, k, ci = 0.95)
+alpha_plot(data, k, ci = 0.95, num_cols_used = 50, max_cols = 100)
 }
 \arguments{
 \item{data}{the \code{matrix} of observations with variables (e.g., stations) in
@@ -15,6 +15,17 @@ estimator}
 
 \item{ci}{the confidence level (as a proportion) for the confidence intervals
 that will be plotted (the default is 0.95 which makes 95\% CIs).}
+
+\item{num_cols_used}{the number of columns from the \code{data} that you want to
+use in the estimation and plotting (default is 50). The columns will be
+randomly sampled. This is used to ensure the plot isn't too crowded.
+It is better if the user manually selects the columns to use and only
+enters those columns.}
+
+\item{max_cols}{the maximum number of columns to be used. This argument is
+intended to protect users from waiting for the function to create a
+useless plot. Change to a value larger than the number of columns (CIs)
+you intend to use (print in the same plot). (default is 100)}
 }
 \value{
 a ggplot2 \code{plot} object which shows 100*\code{ci}\% confidence intervals

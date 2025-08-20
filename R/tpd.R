@@ -464,6 +464,15 @@ is.tpd <- function(x){
 #'    estimator
 #' @param ci the confidence level (as a proportion) for the confidence intervals
 #'    that will be plotted (the default is 0.95 which makes 95% CIs).
+#' @param num_cols_used the number of columns from the `data` that you want to
+#'    use in the estimation and plotting (default is 50). The columns will be
+#'    randomly sampled. This is used to ensure the plot isn't too crowded.
+#'    It is better if the user manually selects the columns to use and only
+#'    enters those columns.
+#' @param max_cols the maximum number of columns to be used. This argument is
+#'    intended to protect users from waiting for the function to create a
+#'    useless plot. Change to a value larger than the number of columns (CIs)
+#'    you intend to use (print in the same plot). (default is 100)
 #'
 #' @returns a ggplot2 `plot` object which shows 100*`ci`% confidence intervals
 #'    for the tail index (alpha) of each variable computed using the Hill
@@ -476,7 +485,19 @@ is.tpd <- function(x){
 #'
 #' @examples
 #' alpha_plot(financial_data[, -1], k = 300)
-alpha_plot <- function(data, k, ci = 0.95){
+alpha_plot <- function(data, k, ci = 0.95, num_cols_used = 50, max_cols = 100){
+  if(num_cols_used > max_cols){
+    stop(
+      paste0("#!#!# You have asked to create a plot with ", num_cols_used, " CIs.
+             We think that might be a mistake as it is quite large.
+             If you want to proceed then repeat the function call with the
+             additional argument `max_cols` set larger than `num_cols_used`.")
+      )
+  }
+  if(NCOL(data) > num_cols_used){ # sub-sample the columns if there are too many
+    cols_to_use <- sample(1:NCOL(data), size = num_cols_used, replace = FALSE)
+    data <- data[,cols_to_use]
+  }
   if(!is.null(names(data))){
     index <- names(data)
   } else {
