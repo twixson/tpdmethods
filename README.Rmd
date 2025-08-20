@@ -246,32 +246,35 @@ the function `hill()` from the `evir` package on a few variable here to
 illustrate the method. We consider using up to k = 2000 and add horizontal 
 lines to the Hill plots as a visual aid. 
 
-```{r 'hill_plots', fig.height=4, fig.width=4}
-evir::hill(financial_data[,2], end = 2000)
-abline(h = 3.25, col = 4)
-evir::hill(financial_data[,3], end = 2000)
-abline(h = 3.25, col = 4)
-evir::hill(financial_data[,29], end = 2000)
-abline(h = 3.25, col = 4)
-evir::hill(financial_data[,30], end = 2000)
-abline(h = c(3.25, 2.5), col = 4)
+```{r 'hill_plots1', fig.height=7, fig.width=7}
+par(mfrow = c(2,2))
+  evir::hill(financial_data[,2], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,3], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,29], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,30], end = 2000)
+  abline(h = c(2.5, 3.25), col = 4)
+par(mfrow = c(1,1))
 ```
+
 
 Notice that the estimate becomes noisy when `k` is quite small as is standard 
 with these types of plots. It is challenging to determine where the estimates 
 become stable but the horizontal line in these plots suggests that somewhere 
 between 300 and 500 is reasonable. We will move forward with `k = 300` because
-the third Hill plot suggests a smaller number is needed. We assume that the 
-same `k` is reasonable for all variables. This will not always be the case (for 
-example weather station data with different length records would likely use 
-different `k`'s). 
+the Hill plot on the bottom left suggests a smaller number is needed. We assume 
+that the same `k` is reasonable for all variables. This will not always be the 
+case (for example weather station data with different length records would 
+likely use different `k`'s). This package cannot handle differing `k`'s. 
 
 Our next step is to determine if it is plausible that the shape of the tail for
 all of the variables is the same (i.e., if they share an alpha). To do this we 
 use the `alpha_plot()` function which plots the point estimate and confidence 
 interval for each variable as well as a horizontal line at the joint estimate. 
 
-```{r "alpha_plot", fig.height=4, fig.width=7}
+```{r "alpha_plot", fig.height=2.5, fig.width=7}
 alpha_plot(financial_data[,-1], k = 300)
 ```
 
@@ -405,9 +408,9 @@ dates[head(ts1_ordered)]
 
 The largest loss is Black Monday, October 19, 1987, which is the largest 
 single-day U.S. stock market loss. The second largest loss, March 16, 2020, is 
-the second Black Monday of the 2020 stock market crash due to COVID-29.
+the second Black Monday of the 2020 stock market crash due to COVID-19.
 
-Finally, we can look at scatterplots of the first principal components. 
+Finally, we can look at scatter plots of the first principal components. 
 ```{r 'scatter', fig.height=2, fig.width=7}
 scatter_df <- data.frame(pc1 = ts1, 
                          pc2 = get_pc_ts(eigen_num = 2, 

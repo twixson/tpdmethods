@@ -257,41 +257,32 @@ consider using up to k = 2000 and add horizontal lines to the Hill plots
 as a visual aid.
 
 ``` r
-evir::hill(financial_data[,2], end = 2000)
-abline(h = 3.25, col = 4)
+par(mfrow = c(2,2))
+  evir::hill(financial_data[,2], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,3], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,29], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,30], end = 2000)
+  abline(h = c(2.5, 3.25), col = 4)
 ```
 
-<img src="man/figures/README-hill_plots-1.png" width="100%" />
+<img src="man/figures/README-hill_plots1-1.png" width="100%" />
 
 ``` r
-evir::hill(financial_data[,3], end = 2000)
-abline(h = 3.25, col = 4)
+par(mfrow = c(1,1))
 ```
-
-<img src="man/figures/README-hill_plots-2.png" width="100%" />
-
-``` r
-evir::hill(financial_data[,29], end = 2000)
-abline(h = 3.25, col = 4)
-```
-
-<img src="man/figures/README-hill_plots-3.png" width="100%" />
-
-``` r
-evir::hill(financial_data[,30], end = 2000)
-abline(h = c(3.25, 2.5), col = 4)
-```
-
-<img src="man/figures/README-hill_plots-4.png" width="100%" />
 
 Notice that the estimate becomes noisy when `k` is quite small as is
 standard with these types of plots. It is challenging to determine where
 the estimates become stable but the horizontal line in these plots
 suggests that somewhere between 300 and 500 is reasonable. We will move
-forward with `k = 300` because the third Hill plot suggests a smaller
-number is needed. We assume that the same `k` is reasonable for all
-variables. This will not always be the case (for example weather station
-data with different length records would likely use different `k`’s).
+forward with `k = 300` because the Hill plot on the bottom left suggests
+a smaller number is needed. We assume that the same `k` is reasonable
+for all variables. This will not always be the case (for example weather
+station data with different length records would likely use different
+`k`’s). This package cannot handle differing `k`’s.
 
 Our next step is to determine if it is plausible that the shape of the
 tail for all of the variables is the same (i.e., if they share an
@@ -457,9 +448,9 @@ dates[head(ts1_ordered)]
 The largest loss is Black Monday, October 19, 1987, which is the largest
 single-day U.S. stock market loss. The second largest loss, March 16,
 2020, is the second Black Monday of the 2020 stock market crash due to
-COVID-29.
+COVID-19.
 
-Finally, we can look at scatterplots of the first principal components.
+Finally, we can look at scatter plots of the first principal components.
 
 ``` r
 scatter_df <- data.frame(pc1 = ts1, 
