@@ -36,6 +36,9 @@
 #' @param fix_alpha used to fix the value of the tail index `alpha` at a user
 #'    specified value so that PCA can be done with different `alpha` values.
 #'    This overrides the estimation of `alpha` for the `tpd` object.
+#' @param k the number of large order statistics to use in the estimation of
+#'    the joint alpha for the tpd object. (default is `NULL`. This corresponds
+#'    to choosing all order statistics above the emperical 0.975-quantile.)
 #' @param marginal_thresh the quantile to use as a cutoff between the ECDF and
 #'    GPD components in the marginal transformation. (default is 0.975)
 #' @param matrix_as_seasons change to `TRUE` if your time series data are stored
@@ -77,6 +80,7 @@ tpd <- function(data,
                 gpd_scale = -99,
                 gpd_shape = -99,
                 fix_alpha = NULL,
+                k = NULL,
                 marginal_thresh = 0.975,
                 matrix_as_seasons = FALSE,
                 vector_norm = FALSE,
@@ -253,12 +257,15 @@ tpd <- function(data,
   if(!is.null(fix_alpha)){
     temp_alpha <- fix_alpha
   } else if(trans_marginal != TRUE){
-    temp_fit   <- evd::fpot(c(data), threshold = quantile(data, probs = 0.975))
-    temp_alpha <- 1/unname(temp_fit$estimate[2])
+    if(is.null(k)){
+      print(paste0("No `k` input, we will use the emperical 0.975-quantile to
+                 select `k` for use in the Hill estimator."))
+      k <- floor(0.025 * NROW(data))
+    }
+    temp_alpha <- alpha_hat(data, k = k)
   }
 
   tpds <- validate_tpd(new_tpd(x = tpds, alpha = temp_alpha))
-
   return(tpds)
 }
 

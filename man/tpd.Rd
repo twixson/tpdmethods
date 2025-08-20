@@ -14,6 +14,7 @@ tpd(
   gpd_scale = -99,
   gpd_shape = -99,
   fix_alpha = NULL,
+  k = NULL,
   marginal_thresh = 0.975,
   matrix_as_seasons = FALSE,
   vector_norm = FALSE,
@@ -57,6 +58,10 @@ estimated. (default is -99)}
 \item{fix_alpha}{used to fix the value of the tail index \code{alpha} at a user
 specified value so that PCA can be done with different \code{alpha} values.
 This overrides the estimation of \code{alpha} for the \code{tpd} object.}
+
+\item{k}{the number of large order statistics to use in the estimation of
+the joint alpha for the tpd object. (default is \code{NULL}. This corresponds
+to choosing all order statistics above the emperical 0.975-quantile.)}
 
 \item{marginal_thresh}{the quantile to use as a cutoff between the ECDF and
 GPD components in the marginal transformation. (default is 0.975)}
