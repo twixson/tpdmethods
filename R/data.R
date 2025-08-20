@@ -35,10 +35,11 @@ NULL
 
 #' Financial Data from the Kenneth R. French Data Library.
 #'
-#' These data are the losses in 30 different sectors of the economy (e.g.,
-#'    food, oil, and health) from 1970 through 2023. A `matrix` with 13599 rows
-#'    (days financial data were recorded) and 31 columns (first column is date,
-#'    the rest are the sectors).
+#' These data are the losses (negative value-averaged daily returns data) from
+#'    30 different sectors of the economy (e.g., food, oil, and health) from
+#'    1970 through 2023. A `matrix` with 13599 rows (days financial data were
+#'    recorded) and 31 columns (first column is date, the rest are the sectors).
+#'    Data are from the Kenneth R. French Data Library.
 #'
 #' @name financial_data
 #' @docType data

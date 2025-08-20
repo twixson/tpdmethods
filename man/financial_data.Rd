@@ -8,10 +8,11 @@
 \url{https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html}
 }
 \description{
-These data are the losses in 30 different sectors of the economy (e.g.,
-food, oil, and health) from 1970 through 2023. A \code{matrix} with 13599 rows
-(days financial data were recorded) and 31 columns (first column is date,
-the rest are the sectors).
+These data are the losses (negative value-averaged daily returns data) from
+30 different sectors of the economy (e.g., food, oil, and health) from
+1970 through 2023. A \code{matrix} with 13599 rows (days financial data were
+recorded) and 31 columns (first column is date, the rest are the sectors).
+Data are from the Kenneth R. French Data Library.
 }
 \references{
 \insertRef{kiriliouk2022}{tpdmethods}
