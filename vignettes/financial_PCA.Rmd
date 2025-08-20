@@ -1,0 +1,238 @@
+---
+title: "financial_PCA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{financial_PCA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(tpdmethods)
+```
+
+
+## Vignette 2: Principal Components Analysis - Financial Data
+
+In this second breif example we will explore the extremes analogue to principal
+components analysis using financial data from the Kenneth R. French Data Library.
+These data are included in the package as `financial_data`. The data consist of
+13599 observations of losses (negative value-averaged daily returns) from 30 
+financial sectors (e.g., coal, autos, and retail) from 1970 through 2023. 
+Definitions of the financial sectors can be found in `Industry_definitions.txt`. 
+
+The first step of the analysis pipeline is to determine whether the data are 
+heavy tailed, if they can be reasonably assumed to have the same index of 
+regular variation (alpha), and to estimate that alpha. This is required because
+the `tpd()` function assumes a heavy tail and a shared alpha. 
+
+To check the tail of these data we will use the Hill estimator (Hill, 1975). 
+This estimator uses the largest `k` order statistics to estimate alpha. A 
+standard way of choosing `k` is to look at a Hill plot which computes the Hill 
+estimator across a range of values for `k` and choosing the largest `k` such 
+that the estimates for all smaller values of `k` are relatively stable. We use 
+the function `hill()` from the `evir` package on a few variable here to 
+illustrate the method. We consider using up to k = 2000 and add horizontal 
+lines to the Hill plots as a visual aid. 
+
+```{r 'hill_plots1', fig.height=7, fig.width=7}
+par(mfrow = c(2,2))
+  evir::hill(financial_data[,2], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,3], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,29], end = 2000)
+  abline(h = 3.25, col = 4)
+  evir::hill(financial_data[,30], end = 2000)
+  abline(h = c(2.5, 3.25), col = 4)
+par(mfrow = c(1,1))
+```
+
+
+Notice that the estimate becomes noisy when `k` is quite small as is standard 
+with these types of plots. It is challenging to determine where the estimates 
+become stable but the horizontal line in these plots suggests that somewhere 
+between 300 and 500 is reasonable. We will move forward with `k = 300` because
+the Hill plot on the bottom left suggests a smaller number is needed. We assume 
+that the same `k` is reasonable for all variables. This will not always be the 
+case (for example weather station data with different length records would 
+likely use different `k`'s). This package cannot handle differing `k`'s. 
+
+Our next step is to determine if it is plausible that the shape of the tail for
+all of the variables is the same (i.e., if they share an alpha). To do this we 
+use the `alpha_plot()` function which plots the point estimate and confidence 
+interval for each variable as well as a horizontal line at the joint estimate. 
+
+```{r "alpha_plot", fig.height=2.5, fig.width=7}
+alpha_plot(financial_data[,-1], k = 300)
+```
+
+There is broad agreement across financial sectors with two notable exceptions. 
+The financial and textiles sectors appear to have smaller alphas (heavier tails)
+than the rest of the market. Here the researcher has to make a choice about 
+whether a common alpha makes sense or not. There are multiple testing issues 
+involved with comparing 30 confidence intervals and that the choice
+of `k` has a large effect on the resulting confidence intervals. If the 
+researcher is willing to assume a common alpha then they can move on (as we do 
+a bit further below). If not then they can either drop those variables, 
+perform a marginal transformation on those variables, or perform a marginal 
+transformation on all of the variables in the dataset (as we do here). 
+Transforming the margins can be done to ensure a shared alpha and to ensure a 
+common scale, this allows the analysis to be analogous to PCA on the correlation
+matrix rather than the covariance matrix. 
+
+Our next step is estimating the TPD matrix (TPDM). The TPDM is an extremes 
+analogue to the covariance matrix and it shares many 
+properties with a covariance matrix. In the following example we have 
+standardized the margins so the TPDM is analogous to a correlation matrix. 
+
+```{r 'pca_tpd'}
+tpdm <- tpd(as.matrix(-financial_data[,-1]))
+```
+
+Now that the TPDM is estimated we need to perform the eigen decomposition. 
+The elements of the TPDM are estimated pairwise and thus the estimated TPDM may
+not be positive definite. We fix this by performing the eigen decomposition on 
+a positive definite matrix that is close to the estimated TPDM using the 
+`make_pd = TRUE` toggle in the `get_eigen()` call. 
+
+```{r 'eigen_decomp'}
+eigen_tpdm <- get_eigen(tpdm, make_pd = TRUE)
+```
+
+Now that we have the eigen decomposition of the TPDM we can try to interpret 
+the eigenvectors and eigenvalues using some plots. Our first plot is a scree 
+plot which demonstrates how important the first eigenvalue is. We include this 
+plot twice to show that the `normalize` argument only changes the scale. 
+
+```{r 'scree', fig.height=2.5, fig.width=7}
+p1 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = TRUE)
+p2 <- plot_scree(eigen_tpdm$values, max_ind = 15, normalize = FALSE)
+cowplot::plot_grid(p1, p2, ncol = 2)
+```
+
+The next plot looks at the eigenvector loadings.
+
+```{r 'eigen_plot', fig.height=2.5, fig.width=7}
+plot_eigen(eigen_tpdm$vectors, 
+           num_vecs = 5, 
+           var_names = colnames(financial_data[-1]))
+```
+
+This plot shows that the first (and by-far most important) eigenvector
+is nearly constant which suggests that large losses in any sector are frequently 
+accompanied by large losses across the entire market. The next eigenvalues
+distinguish between sub-components of the financial market. The second
+eigenvector suggests that the beer, food, health, household, and smoke sectors 
+of the market tend to have less extreme losses than more discretionary items 
+like autos, books, etc. 
+
+If we believe that the data are tail-equivalaent (i.e., they share an alpha, 
+which seems plausible given the plot produced by `alpha_plot()` earlier) then we 
+can perform a similar PCA for the covariance analogue (rather than the 
+correlation analogue) by setting `trans_marginal = FALSE`. If we want to ensure 
+that the alpha associated with the estimated tpd is the same as what we saw in 
+the plot above then we can set `fix_alpha = 3.139` or set `k = 300`. 
+
+The default settings for computing the tpd computes the radial components of the 
+pseudo-polar decomposition pairwise. This is more sensible if
+we expect the most extreme events to be local (e.g., rainfall). When we expect
+large events to occur globally it makes sense to compute the radii as a norm 
+across the whole vector. This is done with `vector_norm = TRUE`. 
+
+```{r "cov_analogue", fig.height=2.5, fig.width=7}
+tpdm_cov <- tpd(as.matrix(-financial_data[,-1]), 
+                trans_marginal = FALSE, 
+                vector_norm = TRUE)
+eigen_cov <- get_eigen(tpdm_cov, make_pd = TRUE)
+plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
+```
+
+Note the differences between these two sets of eigenvectors (e.g., look at the 
+"coal" sector). A primary reason for this is the differences in scale which is 
+obscured in the correlation-analogue set of eigenvectors because we fix the 
+scales at 1 in that case.
+
+```{r "scale_differences"}
+# correlation analogue
+head(sort(diag(tpdm), decreasing = TRUE))
+
+# covariance analogue
+head(sort(diag(tpdm_cov), decreasing = TRUE))
+colnames(financial_data[-1])[order(diag(tpdm_cov))[30:25]]
+```
+
+
+
+In addition to these plots, we can make time series plots for a few principal 
+components. 
+
+```{r 'time_series_plots', fig.height=6, fig.width=7}
+dates <- as.Date(as.character(financial_data[,1]), "%Y%m%d")
+ts1_plot <- get_ts_plot(eigen_num = 1, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+ts2_plot <- get_ts_plot(eigen_num = 2, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+ts3_plot <- get_ts_plot(eigen_num = 3, 
+                        eigen_vecs = eigen_tpdm$vectors, 
+                        data = as.matrix(financial_data[,-1]), 
+                        dates = dates)
+                  
+cowplot::plot_grid(ts1_plot, ts2_plot, ts3_plot, nrow = 3)
+```
+
+There is a very large negative value in principal component 1. What day is that?
+
+```{r 'investigate_ts'}
+ts1 <- get_pc_ts(eigen_num = 1, 
+                 eigen_vecs = eigen_tpdm$vectors, 
+                 data = as.matrix(financial_data[,-1]))
+ts1_ordered <- order(ts1)
+dates[head(ts1_ordered)]
+```
+
+The largest loss is Black Monday, October 19, 1987, which is the largest 
+single-day U.S. stock market loss. The second largest loss, March 16, 2020, is 
+the second Black Monday of the 2020 stock market crash due to COVID-19.
+
+Finally, we can look at scatter plots of the first principal components. 
+```{r 'scatter', fig.height=2, fig.width=7}
+scatter_df <- data.frame(pc1 = ts1, 
+                         pc2 = get_pc_ts(eigen_num = 2, 
+                                         eigen_vecs = eigen_tpdm$vectors, 
+                                         data = as.matrix(financial_data[,-1])))
+max_val <- max(abs(scatter_df))
+
+radii <- apply(scatter_df, 1, function(x){sqrt(sum(x^2))})
+scatter_df$large <- as.factor(
+  ifelse(radii > quantile(probs = 0.95, radii), 1, 0))
+
+ggplot2::ggplot(scatter_df, ggplot2::aes(x = pc1, y = pc2)) + 
+  ggplot2::geom_point(ggplot2::aes(col = large), alpha = 0.5) + 
+  ggplot2::coord_fixed() + 
+  ggplot2::scale_color_discrete(type = scico::scico(4, palette = "vik")[2:3]) + 
+  ggplot2::theme_minimal()
+```
+
+In this brief example we demonstrated a few of the key PCA analogue functions: 
+
+* `alpha_plot()` - for checking the assumption of a common alpha.
+* `tpd()` - for estimating the TPD matrix of in a multivariate setting.
+* `get_eigen()` - for performing the eigen decomposition of a positive definite
+    matrix that is close to the estimated TPDM
+* `plot_scree()` - for creating a scree plot of the eigenvalues. 
+* `plot_eigen()` - for creating a plot which shows eigenvector loadings.  
+* `get_ts_plot()` - for creating a time series plot of a principal component. 
+* `get_pc_ts()` - for getting the principal component time series for further
+    investigation. 

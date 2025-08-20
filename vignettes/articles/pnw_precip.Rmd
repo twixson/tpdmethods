@@ -34,7 +34,6 @@ tpdm <- matrix(NA, nrow = dim(precip_alpha2)[2], ncol = dim(precip_alpha2)[2])
 tictoc::tic("tpdm estimation")
 tpdm <- tpd(precip_alpha2, trans_marginal = FALSE)
 tictoc::toc()
-tictoc::toc()
 ```
 
 ```{r "eigen_decomposition"}
