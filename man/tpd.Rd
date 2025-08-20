@@ -60,7 +60,8 @@ specified value so that PCA can be done with different \code{alpha} values.
 This overrides the estimation of \code{alpha} for the \code{tpd} object.}
 
 \item{k}{the number of large order statistics to use in the estimation of
-the joint alpha for the tpd object. (default is \code{NULL}. This corresponds
+the joint alpha for the tpd object. In particular, we use \code{k} order
+statistics from each variable. (default is \code{NULL}. This corresponds
 to choosing all order statistics above the emperical 0.975-quantile.)}
 
 \item{marginal_thresh}{the quantile to use as a cutoff between the ECDF and

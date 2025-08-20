@@ -37,7 +37,8 @@
 #'    specified value so that PCA can be done with different `alpha` values.
 #'    This overrides the estimation of `alpha` for the `tpd` object.
 #' @param k the number of large order statistics to use in the estimation of
-#'    the joint alpha for the tpd object. (default is `NULL`. This corresponds
+#'    the joint alpha for the tpd object. In particular, we use `k` order
+#'    statistics from each variable. (default is `NULL`. This corresponds
 #'    to choosing all order statistics above the emperical 0.975-quantile.)
 #' @param marginal_thresh the quantile to use as a cutoff between the ECDF and
 #'    GPD components in the marginal transformation. (default is 0.975)
