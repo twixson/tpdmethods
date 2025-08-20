@@ -93,9 +93,11 @@ plot(0:30, fw_tpd_present,
 
 After estimating the TPD we need to fit a model to the data. We will use
 the extremes analogue to the innovations algorithm to fit a
-transformed-linear moving average (TL-MA) model up to order `q = 20`. We
-will visually compare the plot of the fitted TPD function to the
-empirical TPD function to determine which model to retain.
+transformed-linear moving average (TL-MA) model up to order `q = 20`.
+This function automatically checks if the inputted `tpd` object was
+generated assuming an alpha of 2, if it does not then the algorithm does
+not hold. We will visually compare the plot of the fitted TPD function
+to the empirical TPD function to determine which model to retain.
 
 ``` r
 set.seed(1982374)
@@ -233,12 +235,95 @@ This brief example demonstrated a few of the key functions:
 In this second breif example we will explore the extremes analogue to
 principal components analysis using financial data from the Kenneth R.
 French Data Library. These data are included in the package as
-`financial_data`. The data consist of 13599 observations of losses from
-30 financial sectors (e.g., coal, autos, and retail) from 1970 through
-2023. Definitions of the financial sectors can be found in
-`Industry_definitions.txt`.
+`financial_data`. The data consist of 13599 observations of losses
+(negative value-averaged daily returns) from 30 financial sectors (e.g.,
+coal, autos, and retail) from 1970 through 2023. Definitions of the
+financial sectors can be found in `Industry_definitions.txt`.
 
-We begin by estimating the TPD matrix (TPDM):
+The first step of the analysis pipeline is to determine whether the data
+are heavy tailed, if they can be reasonably assumed to have the same
+index of regular variation (alpha), and to estimate that alpha. This is
+required because the `tpd()` function assumes a heavy tail and a shared
+alpha.
+
+To check the tail of these data we will use the Hill estimator (Hill,
+1975). This estimator uses the largest `k` order statistics to estimate
+alpha. A standard way of choosing `k` is to look at a Hill plot which
+computes the Hill estimator across a range of values for `k` and
+choosing the largest `k` such that the estimates for all smaller values
+of `k` are relatively stable. We use the function `hill()` from the
+`evir` package on a few variable here to illustrate the method. We
+consider using up to k = 2000 and add horizontal lines to the Hill plots
+as a visual aid.
+
+``` r
+evir::hill(financial_data[,2], end = 2000)
+abline(h = 3.25, col = 4)
+```
+
+<img src="man/figures/README-hill_plots-1.png" width="100%" />
+
+``` r
+evir::hill(financial_data[,3], end = 2000)
+abline(h = 3.25, col = 4)
+```
+
+<img src="man/figures/README-hill_plots-2.png" width="100%" />
+
+``` r
+evir::hill(financial_data[,29], end = 2000)
+abline(h = 3.25, col = 4)
+```
+
+<img src="man/figures/README-hill_plots-3.png" width="100%" />
+
+``` r
+evir::hill(financial_data[,30], end = 2000)
+abline(h = c(3.25, 2.5), col = 4)
+```
+
+<img src="man/figures/README-hill_plots-4.png" width="100%" />
+
+Notice that the estimate becomes noisy when `k` is quite small as is
+standard with these types of plots. It is challenging to determine where
+the estimates become stable but the horizontal line in these plots
+suggests that somewhere between 300 and 500 is reasonable. We will move
+forward with `k = 300` because the third Hill plot suggests a smaller
+number is needed. We assume that the same `k` is reasonable for all
+variables. This will not always be the case (for example weather station
+data with different length records would likely use different `k`’s).
+
+Our next step is to determine if it is plausible that the shape of the
+tail for all of the variables is the same (i.e., if they share an
+alpha). To do this we use the `alpha_plot()` function which plots the
+point estimate and confidence interval for each variable as well as a
+horizontal line at the joint estimate.
+
+``` r
+alpha_plot(financial_data[,-1], k = 300)
+```
+
+<img src="man/figures/README-alpha_plot-1.png" width="100%" />
+
+There is broad agreement across financial sectors with two notable
+exceptions. The financial and textiles sectors appear to have smaller
+alphas (heavier tails) than the rest of the market. Here the researcher
+has to make a choice about whether a common alpha makes sense or not.
+There are multiple testing issues involved with comparing 30 confidence
+intervals and that the choice of `k` has a large effect on the resulting
+confidence intervals. If the researcher is willing to assume a common
+alpha then they can move on (as we do a bit further below). If not then
+they can either drop those variables, perform a marginal transformation
+on those variables, or perform a marginal transformation on all of the
+variables in the dataset (as we do here). Transforming the margins can
+be done to ensure a shared alpha and to ensure a common scale, this
+allows the analysis to be analogous to PCA on the correlation matrix
+rather than the covariance matrix.
+
+Our next step is estimating the TPD matrix (TPDM). The TPDM is an
+extremes analogue to the covariance matrix and it shares many properties
+with a covariance matrix. In the following example we have standardized
+the margins so the TPDM is analogous to a correlation matrix.
 
 ``` r
 tpdm <- tpd(as.matrix(-financial_data[,-1]))
@@ -246,10 +331,7 @@ tpdm <- tpd(as.matrix(-financial_data[,-1]))
 #> [1] ". . . and columns represent variables."
 ```
 
-The TPDM is an extremes analogue to the covariance matrix and it shares
-many properties with a covariance matrix. In the following example we
-have standardized the margins so the TPDM is analogous to a correlation
-matrix. Now that the TPDM is estimated we need to perform the eigen
+Now that the TPDM is estimated we need to perform the eigen
 decomposition. The elements of the TPDM are estimated pairwise and thus
 the estimated TPDM may not be positive definite. We fix this by
 performing the eigen decomposition on a positive definite matrix that is
@@ -292,14 +374,20 @@ market. The second eigenvector suggests that the beer, food, health,
 household, and smoke sectors of the market tend to have less extreme
 losses than more discretionary items like autos, books, etc.
 
-If we believe that the data are tail-equivalaent the we can perform a
-similar PCA for the covariance analogue (rather than the correlation
-analogue) by setting `trans_marginal = FALSE`. The default setting
-computes the radial components of the pseudo-polar decomposition
-pairwise. This is more sensible if we expect the most extreme events to
-be local (e.g., rainfall). When we expect large events to occur globally
-it makes sense to compute the radii as a norm across the whole vector.
-This is done with `vector_norm = TRUE`.
+If we believe that the data are tail-equivalaent (i.e., they share an
+alpha, which seems plausible given the plot produced by `alpha_plot()`
+earlier) then we can perform a similar PCA for the covariance analogue
+(rather than the correlation analogue) by setting
+`trans_marginal = FALSE`. If we want to ensure that the alpha associated
+with the estimated tpd is the same as what we saw in the plot above then
+we can set `fix_alpha = 3.139` or set `k = 300`.
+
+The default settings for computing the tpd computes the radial
+components of the pseudo-polar decomposition pairwise. This is more
+sensible if we expect the most extreme events to be local (e.g.,
+rainfall). When we expect large events to occur globally it makes sense
+to compute the radii as a norm across the whole vector. This is done
+with `vector_norm = TRUE`.
 
 ``` r
 tpdm_cov <- tpd(as.matrix(-financial_data[,-1]), 
@@ -396,6 +484,7 @@ ggplot2::ggplot(scatter_df, ggplot2::aes(x = pc1, y = pc2)) +
 In this brief example we demonstrated a few of the key PCA analogue
 functions:
 
+- `alpha_plot()` - for checking the assumption of a common alpha.
 - `tpd()` - for estimating the TPD matrix of in a multivariate setting.
 - `get_eigen()` - for performing the eigen decomposition of a positive
   definite matrix that is close to the estimated TPDM
