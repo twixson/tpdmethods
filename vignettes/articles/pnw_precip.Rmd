@@ -113,5 +113,3 @@ ts_plots <- lapply(c(1:6), get_ts_plot,
 cowplot::plot_grid(plotlist = ts_plots, nrow = 2, ncol = 3, align = "hv")
 ```
 We note that these time series plots have missing values as we only downloaded  observations for the winter. 
-
-
