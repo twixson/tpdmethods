@@ -22,22 +22,19 @@ transform_marginal(
 only. When \code{TRUE} a GPD is used to estimate the upper tail. (default is
 \code{TRUE})}
 
-\item{fix_gpd_params}{change to \code{TRUE} if you want to fix either the scale
-or the shape of the GPD used to fit the upper tail of the marginal
-distribution. (default is \code{FALSE})}
+\item{gpd_scale}{fix the scale at your desired scale value. If no value is
+input then it will be estimated. (default is -99)}
 
-\item{gpd_scale}{set at your desired scale value. Only used if
-\code{fix_gpd_params = TRUE}. (default is -99)}
-
-\item{gpd_shape}{set at your desired shape value. Only used if
-\code{fix_gpd_params = TRUE}. Note that gpd shape is 1/alpha. (default is -99)}
+\item{gpd_shape}{fix the shape at your desired shape value. If no value is
+input then it will be estimated. Note that gpd shape is 1/alpha so if you
+have generated data with alpha=2 you should enter 1/2. (default is -99)}
 }
 \value{
 a \code{vector} of data on Fr\'echet(2) margins
 }
 \description{
 This function transforms the marginal distribution of a dataset. It is used on
-one margin at a time. It uses a GPD above a quantile q and the ECDF below.
+one margin at a time. It uses a GPD above a quantile \code{q} and the ECDF below.
 }
 \examples{
 myData <- rnorm(1000)

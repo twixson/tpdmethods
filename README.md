@@ -69,16 +69,17 @@ plot(fire_weather_present[,15],
 
 The first step is to estimate the TPD of the time series data. Since
 these data have plausibly iid replicates (each season) and are already
-on Fréchet($2$) margins we will use `matrix_as_seasons = TRUE` and
-`trans_marginal = FALSE` in our `tpd()` call. We note that `max_lag`
-matters because we are performing a time series analysis but other uses
-of the package will ignore this.
+on Fréchet($2$) margins we will use `matrix_as_seasons = TRUE`,  
+`trans_marginal = FALSE`, and `fix_alpha = 2` in our `tpd()` call. We
+note that `max_lag` matters because we are performing a time series
+analysis but other uses of the package will ignore this.
 
 ``` r
 fw_tpd_present <- tpd(fire_weather_present, 
                       max_lag = 30, 
                       trans_marginal = FALSE, 
-                      matrix_as_seasons = TRUE)
+                      matrix_as_seasons = TRUE, 
+                      fix_alpha = 2)
 #> [1] "Assuming this is a time series with 20 seasons."
 
 plot(0:30, fw_tpd_present, 

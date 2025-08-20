@@ -26,6 +26,13 @@
 #' myTPD <- c(1, 0.4, 0.34, 0.2, 0.11, 0.05, 0.01)
 #' out <- innovations(myTPD, max_q = 5)
 innovations <- function(tpdf, max_q =50){
+  if(is.tpd(tpdf)){
+    stopifnot(attr(tpdf, "alpha") == 2)
+  } else {
+    print("The input is not a `tpd` object.")
+    print("... The following assumes alpha=2.")
+  }
+
   #initialize variables nu and theta_hat
   nu <- rep(NA, max_q + 1)
   theta_hat <- matrix(0, nrow = max_q, ncol = max_q)
@@ -54,20 +61,18 @@ innovations <- function(tpdf, max_q =50){
 #' Transform the marginal distribution to be Fr\'echet(2)
 #'
 #' This function transforms the marginal distribution of a dataset. It is used on
-#'    one margin at a time. It uses a GPD above a quantile q and the ECDF below.
+#'    one margin at a time. It uses a GPD above a quantile `q` and the ECDF below.
 #'
 #' @param x univariate data (`vector`) to be transformed
 #' @param q the quantile to use as a cutoff between the ECDF and GPD components
 #' @param use_gpd change to `FALSE` if you want to use a rank-transformation
 #'    only. When `TRUE` a GPD is used to estimate the upper tail. (default is
 #'    `TRUE`)
-#' @param fix_gpd_params change to `TRUE` if you want to fix either the scale
-#'    or the shape of the GPD used to fit the upper tail of the marginal
-#'    distribution. (default is `FALSE`)
-#' @param gpd_scale set at your desired scale value. Only used if
-#'    `fix_gpd_params = TRUE`. (default is -99)
-#' @param gpd_shape set at your desired shape value. Only used if
-#'    `fix_gpd_params = TRUE`. Note that gpd shape is 1/alpha. (default is -99)
+#' @param gpd_scale fix the scale at your desired scale value. If no value is
+#'    input then it will be estimated. (default is -99)
+#' @param gpd_shape fix the shape at your desired shape value. If no value is
+#'    input then it will be estimated. Note that gpd shape is 1/alpha so if you
+#'    have generated data with alpha=2 you should enter 1/2. (default is -99)
 #'
 #' @returns a `vector` of data on Fr\'echet(2) margins
 #' @export
@@ -88,41 +93,39 @@ transform_marginal <- function(x,
   x_new   <- ecdf(x)(x)
   x_new   <- x_new - 0.5 * min(x_new)
   if(use_gpd == TRUE){
-    if(fix_gpd_params == TRUE){
-      if(gpd_scale != -99 && gpd_shape != -99){
-        for(i in 1:length(x)){
-          if(i %in% large_x){
-            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                            loc = quant_q,
-                                            scale = gpd_scale,
-                                            shape = gpd_shape)
-          }
+    if(gpd_scale != -99 && gpd_shape != -99){
+      for(i in 1:length(x)){
+        if(i %in% large_x){
+          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                          loc = quant_q,
+                                          scale = gpd_scale,
+                                          shape = gpd_shape)
         }
-      } else if(gpd_scale != -99){
-        params <- evd::fpot(x,
-                            threshold = quant_q,
-                            scale = gpd_scale,
-                            std.err = F)$estimate
-        for(i in 1:length(x)){
-          if(i %in% large_x){
-            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                            loc = quant_q,
-                                            scale = gpd_scale,
-                                            shape = params[1])
-          }
+      }
+    } else if(gpd_scale != -99){
+      params <- evd::fpot(x,
+                          threshold = quant_q,
+                          scale = gpd_scale,
+                          std.err = F)$estimate
+      for(i in 1:length(x)){
+        if(i %in% large_x){
+          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                          loc = quant_q,
+                                          scale = gpd_scale,
+                                          shape = params[1])
         }
-      } else if(gpd_shape != -99){
-        params <- evd::fpot(x,
-                            threshold = quant_q,
-                            shape = gpd_shape,
-                            std.err = F)$estimate
-        for(i in 1:length(x)){
-          if(i %in% large_x){
-            x_new[i] <- q + (1-q)*evd::pgpd(x[i],
-                                            loc = quant_q,
-                                            scale = params[1],
-                                            shape = gpd_shape)
-          }
+      }
+    } else if(gpd_shape != -99){
+      params <- evd::fpot(x,
+                          threshold = quant_q,
+                          shape = gpd_shape,
+                          std.err = F)$estimate
+      for(i in 1:length(x)){
+        if(i %in% large_x){
+          x_new[i] <- q + (1-q)*evd::pgpd(x[i],
+                                          loc = quant_q,
+                                          scale = params[1],
+                                          shape = gpd_shape)
         }
       }
     } else {
@@ -199,7 +202,7 @@ gen_arma11 <- function(n, phi, theta){
                         theta * finv(RVnoise[i-1]))
   }
   arma11_ts <- arma11_ts[1001:(1000+n)]
-  a <- transform_marginal(arma11_ts)
+  transform_marginal(arma11_ts)
 }
 
 
@@ -240,6 +243,90 @@ gen_maq <- function(n, thetas){
 }
 
 
+#' Generate a TL-ARMA(p, q) time series
+#'
+#' This function generates a TL-ARMA(p, q) time series of length `n`.
+#'
+#' @param n the length of the desired time series
+#' @param phi a p-`vector` of the auto-regressive (AR) parameters where p is the
+#'    order of the AR component of the TL-ARMA(p,q) process.
+#' @param theta a q-`vector` of the moving average (MA) parameters where q is the
+#'    order of the MA component of the TL-ARMA(p,q) process.
+#'
+#' @returns a `vector`. The length-`n` times series with AR parameters `phi`
+#'    and MA parameters `theta`.
+#' @export
+#'
+#' @references
+#' \insertRef{mhatre2024arma}{tpdmethods}
+#'
+#' @examples
+#' out <- gen_arma(1000, phi = c(0.3), theta = c(-0.1, 0.4, 0.2))
+gen_arma <- function(n, phi, theta){
+  p <- length(phi)
+  q <- length(theta)
+  if(p != 0){ # check if invertible
+    if(root_check(phi) < 1){
+      print("#!#!# The time series may not be useful because the AR polynomial
+            has roots in the unit circle (the process is not invertible).#!#!#")
+    }
+  }
+  if(p == 0){ # MA(q)
+    out <- gen_maq(n, thetas = theta)
+  } else if(p == 1 && q == 0){ # AR(1)
+    out <- gen_ar1(n, phi = phi)
+  } else if(p == 1 && q == 1){ # ARMA(1,1)
+    out <- gen_arma11(n, phi = phi, theta = theta)
+  } else if(q == 0){ # AR(p)
+    RVnoise <- evd::rfrechet(1000*p+n, shape = 2)
+    out     <- numeric(1000*p + n)
+    out[1:(p+q)]  <- RVnoise[1:(p+q)]
+    for(i in (p+q+1):(1000*p+n)){
+      temp_ar <- 0
+      for(a in 1:p){
+        temp_ar <- temp_ar + phi[a] * finv(out[i-a])
+      }
+      out[i] <- f(temp_ar + finv(RVnoise[i]))
+    }
+  } else { # general p and q
+    RVnoise <- evd::rfrechet(1000*p+n, shape = 2)
+    out     <- numeric(1000*p + n)
+    out[1:(p+q)]  <- RVnoise[1:(p+q)]
+    for(i in (p+q+1):(1000*p+n)){
+      temp_ar <- 0
+      for(a in 1:p){
+        temp_ar <- temp_ar + phi[a] * finv(out[i-a])
+      }
+      temp_ma <- finv(RVnoise[i])
+      for(m in 1:q){
+        temp_ma <- temp_ma + theta[m] * finv(RVnoise[i-m])
+      }
+      out[i] <- f(temp_ar + temp_ma)
+    }
+  }
+  out <- out[(1000*p+1):(1000*p+n)]
+  transform_marginal(out)
+}
+
+
+
+
+#' Returns the modulus of the root of a polynomial that is closest to the origin.
+#'
+#' @param phi the parameter vector of the AR polynomial to be checked.
+#'
+#' @returns the scalar modulus of the smallest root
+#' @export
+#'
+#' @examples
+#' root_check(phi = c(0.8, 0.11, 0.1))
+#' root_check(phi = c(0.8, 0.01, 0.1))
+root_check <- function(phi){
+  min(Mod(polyroot(c(1, -rev(phi)))))
+}
+
+
+
 
 #' Compute the TPD function from TL-MA(q) parameters
 #'
@@ -267,7 +354,7 @@ maq_tpdf <- function(thetas, max_lag = 20){
                        pmax(thetas[(i+1):(i+q+1)], rep(0, q+1))) /
       sum(thetas^2) # this is sigma_0 and thus forces the scale to be 1
   }
-  return(sigmas)
+  return(validate_tpd(new_tpd(sigmas, alpha = 2)))
 }
 
 
@@ -288,7 +375,8 @@ maq_tpdf <- function(thetas, max_lag = 20){
 #' @examples
 #' out <- ar1_tpdf(0.3)
 ar1_tpdf <- function(phi, max_lag = 20){
-  pmax(phi^(1:max_lag), rep(0, max_lag)) # scale 1 implies just phi^h
+  sigmas <- pmax(phi^(1:max_lag), rep(0, max_lag)) # scale 1 implies just phi^h
+  return(validate_tpd(new_tpd(sigmas, alpha = 2)))
 }
 
 
@@ -359,9 +447,9 @@ get_arma11_h <- function(params, h){
 #' @examples
 #' out <- arma11_tpdf(c(0.9, 0.1), max_lag = 15)
 arma11_tpdf <- function(params, max_lag = 20){
-  temp_out <- rep(0, max_lag)
+  sigmas <- rep(0, max_lag)
   for(h in 1:max_lag){
-    temp_out[h] <- get_arma11_h(params, h)
+    sigmas[h] <- get_arma11_h(params, h)
   }
-  return(temp_out)
+  return(validate_tpd(new_tpd(sigmas, alpha = 2)))
 }

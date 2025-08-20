@@ -10,6 +10,8 @@ tpd.once(
   radial_thresh = 0,
   get_large = TRUE,
   trans_marginal = TRUE,
+  gpd_scale = -99,
+  gpd_shape = -99,
   marginal_thresh = 0.975
 )
 }
@@ -33,6 +35,16 @@ TPD computation. (default is \code{TRUE})}
 \item{trans_marginal}{change to \code{FALSE} if the margins are already
 Fr\'echet(2). If \code{TRUE} the function will transform marginal distributions
 to be Fr\'echet(2). (default is \code{TRUE})}
+
+\item{gpd_scale}{fix the scale at your desired scale value during the
+marginal transformation. This is only used if \code{trans_marginal == TRUE}.
+If no value is input then it will be estimated. (default is -99)}
+
+\item{gpd_shape}{fix the shape at your desired shape value. If no value is
+input then it will be estimated. Note that gpd shape is 1/alpha so if you
+have generated data with alpha=2 you should enter 1/2. This is only used
+if \code{trans_marginal == TRUE}. If no value is input then it will be
+estimated. (default is -99)}
 
 \item{marginal_thresh}{the quantile to use as a cutoff between the ECDF and
 GPD components in the marginal transformation. (default is 0.975)}
