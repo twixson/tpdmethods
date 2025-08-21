@@ -50,17 +50,18 @@ pak::pak("twixson/tpdmethods")
 
 ## Example 1: Time Series - Fire Weather
 
-This is a basic example which shows a simple TLETS workflow. We will perform a 
-simplified version of the analysis in Wixson and Cooley (2023). The scientific 
+This is a basic example which shows a simple transformed-linear extremes time 
+series (TLETS) workflow. We will perform a simplified version of the analysis 
+in Wixson and Cooley (2023). The scientific 
 question is how much more likely is a fire season like 2020 under present 
 climate than under past climate. Wixson and Cooley (2023) used Fire Weather Index
 (FWI) data to answer this question. An example script and the original data can
 be found at https://github.com/twixson/seasonal_wildfire_risk_attribution. The 
 data exhibited seasonality and so the authors performed a marginal transformation
-that made the assumption of stationarity plausible and put the FWI data on 
-regularly varying ($\alpha = 2$) margins. This marginally-transformed data lives in 
-the package as `fire_weather_present`, and `fire_weather_past`. Each dataset is 
-a matrix with 153 rows for the days in the fire season and 20 columns for the 
+that made the assumption of tail stationarity plausible and put the FWI data on 
+regularly varying ($\alpha = 2$) margins. This marginally-transformed data lives 
+in the package as `fire_weather_present`, and `fire_weather_past`. Each dataset 
+is a matrix with 153 rows for the days in the fire season and 20 columns for the 
 years.
 
 
@@ -74,12 +75,15 @@ plot(fire_weather_present[,15],
      ylab = "FWI")
 ```
 
-The first step is to estimate the TPD of the time series data. Since 
-these data have plausibly iid replicates (each season) and are already on 
-Fréchet($2$) margins we will use `matrix_as_seasons = TRUE`,  
-`trans_marginal = FALSE`, and `fix_alpha = 2` in our `tpd()` call. We note that 
-`max_lag` matters because we are performing a time series analysis but other 
-uses of the package will ignore this. 
+
+### Tail Pairwise Dependence Function 
+
+The first step is to estimate the tail pairwise dependence function (TPDF) of 
+the time series data. Since these data have plausibly iid replicates (each 
+season) and are already on Fréchet($2$) margins we will use 
+`matrix_as_seasons = TRUE`,  `trans_marginal = FALSE`, and `fix_alpha = 2` in 
+our `tpd()` call. We note that `max_lag` matters because we are performing a 
+time series analysis but other uses of the package will ignore this. 
 
 ```{r 'estimate_tpd', fig.height=2.5, fig.width=7}
 fw_tpd_present <- tpd(fire_weather_present, 
@@ -95,13 +99,17 @@ plot(0:30, fw_tpd_present,
      ylab = "TPD")
 ```
 
+
+### Model Fitting
+
 After estimating the TPD we need to fit a model to the data. We will use the 
 extremes analogue to the innovations algorithm to fit a transformed-linear 
 moving average (TL-MA) model up to order `q = 20`. This function automatically 
-checks if the inputted `tpd` object was generated assuming an alpha of 2, if it 
-does not then the algorithm does not hold. We will visually compare the plot of 
-the fitted TPD function to the empirical TPD function to determine which model 
-to retain. 
+checks if the inputted `tpd` object was generated assuming an alpha of 2. This 
+is necessary because the development of the algorithm assumes $\alpha \neq 2$.
+
+We assess model fit by visually comparing the plot of the fitted TPD function 
+to the empirical TPD function. 
 
 ```{r 'fit_MAs', fig.height=2.5, fig.width=7}
 set.seed(1982374)
@@ -124,7 +132,7 @@ Here we can see the TL-MA(15) model fits well up to lag-15. TL-MA(q) models have
 non-zero TPDFs only up to lag-q just like classical MA(q) models. Included on 
 the plot is a horizontal dashed line at 0.1. This is included because of the 
 known bias in the TPD estimator. Wixson and Cooley (2023) considered TPD values 
-that were consistently around this line to be that known bias and thus 
+that were consistently around this line to be the known bias and thus 
 continued their analysis with the TL-MA(15). 
 
 We could repeat the previous steps with the past-climate data (from 1958-1979) 
@@ -200,7 +208,11 @@ rownames(generated_confints) <- c("mean", "lower", "upper")
 round(generated_confints, 4)
 
 ```
+
 Note the broad agreement between our data and the fitted model. 
+
+
+### Summary
 
 This brief example demonstrated a few of the key functions: 
 
@@ -210,7 +222,7 @@ This brief example demonstrated a few of the key functions:
 * `maq_tpdf()` - for computing the model TPD function. 
 * `gen_maq()` - for generating observations from a TL-MA(q) process. 
 * `transform_marginal()` - for transforming the marginal distribution to be 
-    Fréchet($2$). 
+    Fréchet($\alpha = 2$). 
 
 
 %
@@ -225,12 +237,14 @@ This brief example demonstrated a few of the key functions:
 
 ## Example 2: Principal Components Analysis - Financial Data
 
-In this second breif example we will explore the extremes analogue to principal
+In this second brief example we will explore the extremes analogue to principal
 components analysis using financial data from the Kenneth R. French Data Library.
 These data are included in the package as `financial_data`. The data consist of
 13599 observations of losses (negative value-averaged daily returns) from 30 
 financial sectors (e.g., coal, autos, and retail) from 1970 through 2023. 
 Definitions of the financial sectors can be found in `Industry_definitions.txt`. 
+
+### Data Exploration
 
 The first step of the analysis pipeline is to determine whether the data are 
 heavy tailed, if they can be reasonably assumed to have the same index of 
@@ -243,28 +257,39 @@ standard way of choosing `k` is to look at a Hill plot which computes the Hill
 estimator across a range of values for `k` and choosing the largest `k` such 
 that the estimates for all smaller values of `k` are relatively stable. We use 
 the function `hill()` from the `evir` package on a few variable here to 
-illustrate the method. We consider using up to k = 2000 and add horizontal 
-lines to the Hill plots as a visual aid. 
+illustrate the method. We consider using up to `k = 2000` (the 0.85 quantile) as 
+a larger `k` seems implausible. In addition we and add horizontal 
+lines to the Hill plots as a visual aid. The first three plots include a line 
+at the joint estimate and the last plot includes a second line at a more 
+believable value. 
 
 ```{r 'hill_plots1', fig.height=7, fig.width=7}
 par(mfrow = c(2,2))
   evir::hill(financial_data[,2], end = 2000)
-  abline(h = 3.25, col = 4)
+  abline(h = 3.139, col = 4)
   evir::hill(financial_data[,3], end = 2000)
-  abline(h = 3.25, col = 4)
+  abline(h = 3.139, col = 4)
   evir::hill(financial_data[,29], end = 2000)
-  abline(h = 3.25, col = 4)
+  abline(h = 3.139, col = 4)
   evir::hill(financial_data[,30], end = 2000)
-  abline(h = c(2.5, 3.25), col = 4)
+  abline(h = c(2.5, 3.139), col = 4)
 par(mfrow = c(1,1))
 ```
 
+Most of the plots for the 30 financial sectors look similar to the two plots 
+in the top row. The plot in the bottom left is hard to interpret as the 
+estimates do not appear to stabilize. The plot on the bottom right complicates 
+the interpretation as the estimates appear to stabilize but at a different value 
+for alpha. In all four plots the estimates for alpha become noisy when `k` is 
+quite small which is expected as the variance is greater when there are fewer 
+observations used. 
 
-Notice that the estimate becomes noisy when `k` is quite small as is standard 
-with these types of plots. It is challenging to determine where the estimates 
+It is challenging to select a single value above which the estimates 
 become stable but the horizontal line in these plots suggests that somewhere 
-between 300 and 500 is reasonable. We will move forward with `k = 300` because
-the Hill plot on the bottom left suggests a smaller number is needed. We assume 
+between 300 and 500 order statistics is reasonable. We will move forward with 
+`k = 300` because of the Hill plot on the bottom left which suggests a smaller 
+number is needed. Selecting `k = 300` corresponds to assuming stability above 
+the 0.98 quantile which is high enough be be reasonable. We assume 
 that the same `k` is reasonable for all variables. This will not always be the 
 case (for example weather station data with different length records would 
 likely use different `k`'s). This package cannot handle differing `k`'s. 
@@ -283,29 +308,51 @@ The financial and textiles sectors appear to have smaller alphas (heavier tails)
 than the rest of the market. Here the researcher has to make a choice about 
 whether a common alpha makes sense or not. There are multiple testing issues 
 involved with comparing 30 confidence intervals and that the choice
-of `k` has a large effect on the resulting confidence intervals. If the 
-researcher is willing to assume a common alpha then they can move on (as we do 
-a bit further below). If not then they can either drop those variables, 
-perform a marginal transformation on those variables, or perform a marginal 
-transformation on all of the variables in the dataset (as we do here). 
-Transforming the margins can be done to ensure a shared alpha and to ensure a 
-common scale, this allows the analysis to be analogous to PCA on the correlation
-matrix rather than the covariance matrix. 
+of `k` has a large effect on the resulting confidence intervals. 
 
-Our next step is estimating the TPD matrix (TPDM). The TPDM is an extremes 
-analogue to the covariance matrix and it shares many 
-properties with a covariance matrix. In the following example we have 
-standardized the margins so the TPDM is analogous to a correlation matrix. 
+From here a practitioner needs to determine if they want to transform the
+margins. If the practitioner wants to transform the margins (as we do in the 
+first of our two following analyses) then the assumption of a common alpha is 
+unnecessary as the marginal transformation will put all variables on 
+Fr\'echet($\alpha = 2$) margins. The practitioner can move forward with the 
+marginal transformation whether or not the underlying variables have the same 
+alpha. If, instead, the practitioner wants to leave the variables on the 
+natural margins then they must be willing to assume a common alpha (as we do in 
+the second of the following analyses). If the assumption of a common alpha is
+reasonable for some, but not all, of the desired variables then the practitioner 
+could drop variables with different tails from the study or transform the 
+margins of the few that don't match. 
+
+### PCA Example 1: Correlation Analogue
+
+Transforming the margins can be done to ensure a shared alpha. The method of 
+transforming the margins that is built into the `tpdmethods` package assumes 
+that a generalized Pareto distribution is a reasonable model above some high 
+quantile (the emperical 0.975-quantile by default) and uses a rank 
+transformation (the ECDF) below that quantile. This piece-wise model is used to 
+put each variable onto uniform margins which are then transformed with the 
+probability integral transform to Fr\'echet($\alpha = 2$) margins. This 
+transformation, coded in the `transform_marginal()` function, ensures a common 
+alpha as well as a common scale. Since the variables now each have unit scale 
+the subsequent analysis is analogous to PCA on the correlation matrix rather 
+than the covariance matrix. 
+
+To move forward with our analysis we must estimate the TPD matrix (TPDM). The 
+TPDM is an extremes analogue to the covariance matrix. It shares many 
+properties with a covariance matrix including having a correlation analogue as
+a special case. The `tpd()` function is used to estimate the TPDM and it 
+includes the marginal transformation by default (`trans_marginal = TRUE`). Here 
+we have to exclude the first column as it is the dates of each observation. 
 
 ```{r 'pca_tpd'}
-tpdm <- tpd(as.matrix(-financial_data[,-1]))
+tpdm <- tpd(as.matrix(financial_data[,-1]))
 ```
 
-Now that the TPDM is estimated we need to perform the eigen decomposition. 
-The elements of the TPDM are estimated pairwise and thus the estimated TPDM may
-not be positive definite. We fix this by performing the eigen decomposition on 
-a positive definite matrix that is close to the estimated TPDM using the 
-`make_pd = TRUE` toggle in the `get_eigen()` call. 
+Now that the TPDM is estimated we perform an eigen decomposition just like in 
+classical PCA. The elements of the TPDM are estimated pairwise and thus the 
+estimated TPDM may not be positive definite. We fix this by performing the 
+eigen decomposition on a positive definite matrix that is close to the 
+estimated TPDM using the `make_pd = TRUE` toggle in the `get_eigen()` call. 
 
 ```{r 'eigen_decomp'}
 eigen_tpdm <- get_eigen(tpdm, make_pd = TRUE)
@@ -338,45 +385,9 @@ eigenvector suggests that the beer, food, health, household, and smoke sectors
 of the market tend to have less extreme losses than more discretionary items 
 like autos, books, etc. 
 
-If we believe that the data are tail-equivalaent (i.e., they share an alpha, 
-which seems plausible given the plot produced by `alpha_plot()` earlier) then we 
-can perform a similar PCA for the covariance analogue (rather than the 
-correlation analogue) by setting `trans_marginal = FALSE`. If we want to ensure 
-that the alpha associated with the estimated tpd is the same as what we saw in 
-the plot above then we can set `fix_alpha = 3.139` or set `k = 300`. 
 
-The default settings for computing the tpd computes the radial components of the 
-pseudo-polar decomposition pairwise. This is more sensible if
-we expect the most extreme events to be local (e.g., rainfall). When we expect
-large events to occur globally it makes sense to compute the radii as a norm 
-across the whole vector. This is done with `vector_norm = TRUE`. 
-
-```{r "cov_analogue", fig.height=2.5, fig.width=7}
-tpdm_cov <- tpd(as.matrix(-financial_data[,-1]), 
-                trans_marginal = FALSE, 
-                vector_norm = TRUE)
-eigen_cov <- get_eigen(tpdm_cov, make_pd = TRUE)
-plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
-```
-
-Note the differences between these two sets of eigenvectors (e.g., look at the 
-"coal" sector). A primary reason for this is the differences in scale which is 
-obscured in the correlation-analogue set of eigenvectors because we fix the 
-scales at 1 in that case.
-
-```{r "scale_differences"}
-# correlation analogue
-head(sort(diag(tpdm), decreasing = TRUE))
-
-# covariance analogue
-head(sort(diag(tpdm_cov), decreasing = TRUE))
-colnames(financial_data[-1])[order(diag(tpdm_cov))[30:25]]
-```
-
-
-
-In addition to these plots, we can make time series plots for a few principal 
-components. 
+In addition to plots of the eigenvector weights, we can make time series plots 
+for a few principal components. 
 
 ```{r 'time_series_plots', fig.height=6, fig.width=7}
 dates <- as.Date(as.character(financial_data[,1]), "%Y%m%d")
@@ -428,6 +439,59 @@ ggplot2::ggplot(scatter_df, ggplot2::aes(x = pc1, y = pc2)) +
   ggplot2::scale_color_discrete(type = scico::scico(4, palette = "vik")[2:3]) + 
   ggplot2::theme_minimal()
 ```
+
+
+
+### PCA Example 2: Covariance Analogue
+
+If we believe that the data are tail-equivalent (i.e., they share an alpha, 
+which seems plausible given the plot produced by `alpha_plot()` earlier) then we 
+can perform a similar PCA for the covariance analogue (rather than the 
+correlation analogue) by setting `trans_marginal = FALSE`. If we want to ensure 
+that the alpha associated with the estimated tpd is the same as what we saw in 
+the plot above then we can set `fix_alpha = 3.139` or set `k = 300`. 
+
+The default settings for computing the tpd computes the radial components of the 
+pseudo-polar decomposition pairwise. This is more sensible if
+we expect the most extreme events to be local (e.g., rainfall). When we expect
+large events to occur globally it makes sense to compute the radii as a norm 
+across the whole vector. This is done with `vector_norm = TRUE`. 
+
+```{r "cov_analogue", fig.height=2.5, fig.width=7}
+tpdm_cov <- tpd(as.matrix(financial_data[,-1]), 
+                trans_marginal = FALSE, 
+                vector_norm = TRUE)
+eigen_cov <- get_eigen(tpdm_cov, make_pd = TRUE)
+plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
+```
+
+Here we highlight that, just as in classical PCA, when PCA is done on the 
+covariance matrix and the scales are different then one of the early 
+eigenvectors has to account for that difference in scale. A primary difference 
+between these two sets of eigenvectors is the weighting on the coal sector. The 
+scales in the correlation-analogue are fixed at one which obscures the large 
+scale in coal on the original margins. 
+
+```{r "scale_differences"}
+# correlation analogue
+head(sort(diag(tpdm), decreasing = TRUE))
+
+# covariance analogue
+head(sort(diag(tpdm_cov), decreasing = TRUE))
+colnames(financial_data[-1])[order(diag(tpdm_cov))[30:25]]
+```
+
+In the preceding example we considered a covariance analogue by leaving the 
+variables on their original margins. An alternative method would be to estimate
+the alpha for each variable with, for example, the Hill estimator and then to 
+perform a power transformation so that all transformed variables have the same 
+alpha. A power transformation would retain scale information which would allow
+a covariance analogue to the TPDM. This is not currently implemented in the 
+`tpdmethods` package. Please reach out if you feel it, or anything else, would 
+be a usefule addition. 
+
+
+### Summary
 
 In this brief example we demonstrated a few of the key PCA analogue functions: 
 

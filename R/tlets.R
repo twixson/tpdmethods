@@ -267,7 +267,7 @@ gen_arma <- function(n, phi, theta){
   q <- length(theta)
   if(p != 0){ # check if invertible
     if(root_check(phi) < 1){
-      print("#!#!# The time series may not be useful because the AR polynomial
+      stop("#!#!# The time series is not generated because the AR polynomial
             has roots in the unit circle (the process is not invertible).#!#!#")
     }
   }

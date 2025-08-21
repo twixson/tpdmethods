@@ -1,6 +1,7 @@
 ---
 title: "fire_weather_time_series"
 output: rmarkdown::html_vignette
+author: Troy P. Wixson & Daniel Cooley
 vignette: >
   %\VignetteIndexEntry{fire_weather_time_series}
   %\VignetteEngine{knitr::rmarkdown}
@@ -21,17 +22,18 @@ library(tpdmethods)
 
 ## Vignette 1: Time Series - Fire Weather
 
-This is a basic example which shows a simple TLETS workflow. We will perform a 
-simplified version of the analysis in Wixson and Cooley (2023). The scientific 
+This is a basic example which shows a simple transformed-linear extremes time 
+series (TLETS) workflow. We will perform a simplified version of the analysis 
+in Wixson and Cooley (2023). The scientific 
 question is how much more likely is a fire season like 2020 under present 
 climate than under past climate. Wixson and Cooley (2023) used Fire Weather Index
 (FWI) data to answer this question. An example script and the original data can
 be found at https://github.com/twixson/seasonal_wildfire_risk_attribution. The 
 data exhibited seasonality and so the authors performed a marginal transformation
-that made the assumption of stationarity plausible and put the FWI data on 
-regularly varying ($\alpha = 2$) margins. This marginally-transformed data lives in 
-the package as `fire_weather_present`, and `fire_weather_past`. Each dataset is 
-a matrix with 153 rows for the days in the fire season and 20 columns for the 
+that made the assumption of tail stationarity plausible and put the FWI data on 
+regularly varying ($\alpha = 2$) margins. This marginally-transformed data lives 
+in the package as `fire_weather_present`, and `fire_weather_past`. Each dataset 
+is a matrix with 153 rows for the days in the fire season and 20 columns for the 
 years.
 
 
@@ -45,12 +47,15 @@ plot(fire_weather_present[,15],
      ylab = "FWI")
 ```
 
-The first step is to estimate the TPD of the time series data. Since 
-these data have plausibly iid replicates (each season) and are already on 
-Fréchet($2$) margins we will use `matrix_as_seasons = TRUE`,  
-`trans_marginal = FALSE`, and `fix_alpha = 2` in our `tpd()` call. We note that 
-`max_lag` matters because we are performing a time series analysis but other 
-uses of the package will ignore this. 
+
+### Tail Pairwise Dependence Function 
+
+The first step is to estimate the tail pairwise dependence function (TPDF) of 
+the time series data. Since these data have plausibly iid replicates (each 
+season) and are already on Fréchet($2$) margins we will use 
+`matrix_as_seasons = TRUE`,  `trans_marginal = FALSE`, and `fix_alpha = 2` in 
+our `tpd()` call. We note that `max_lag` matters because we are performing a 
+time series analysis but other uses of the package will ignore this. 
 
 ```{r 'estimate_tpd', fig.height=2.5, fig.width=7}
 fw_tpd_present <- tpd(fire_weather_present, 
@@ -66,13 +71,17 @@ plot(0:30, fw_tpd_present,
      ylab = "TPD")
 ```
 
+
+### Model Fitting
+
 After estimating the TPD we need to fit a model to the data. We will use the 
 extremes analogue to the innovations algorithm to fit a transformed-linear 
 moving average (TL-MA) model up to order `q = 20`. This function automatically 
-checks if the inputted `tpd` object was generated assuming an alpha of 2, if it 
-does not then the algorithm does not hold. We will visually compare the plot of 
-the fitted TPD function to the empirical TPD function to determine which model 
-to retain. 
+checks if the inputted `tpd` object was generated assuming an alpha of 2. This 
+is necessary because the development of the algorithm assumes $\alpha \neq 2$.
+
+We assess model fit by visually comparing the plot of the fitted TPD function 
+to the empirical TPD function. 
 
 ```{r 'fit_MAs', fig.height=2.5, fig.width=7}
 set.seed(1982374)
@@ -95,7 +104,7 @@ Here we can see the TL-MA(15) model fits well up to lag-15. TL-MA(q) models have
 non-zero TPDFs only up to lag-q just like classical MA(q) models. Included on 
 the plot is a horizontal dashed line at 0.1. This is included because of the 
 known bias in the TPD estimator. Wixson and Cooley (2023) considered TPD values 
-that were consistently around this line to be that known bias and thus 
+that were consistently around this line to be the known bias and thus 
 continued their analysis with the TL-MA(15). 
 
 We could repeat the previous steps with the past-climate data (from 1958-1979) 
@@ -171,7 +180,11 @@ rownames(generated_confints) <- c("mean", "lower", "upper")
 round(generated_confints, 4)
 
 ```
+
 Note the broad agreement between our data and the fitted model. 
+
+
+### Summary
 
 This brief example demonstrated a few of the key functions: 
 
@@ -181,4 +194,4 @@ This brief example demonstrated a few of the key functions:
 * `maq_tpdf()` - for computing the model TPD function. 
 * `gen_maq()` - for generating observations from a TL-MA(q) process. 
 * `transform_marginal()` - for transforming the marginal distribution to be 
-    Fréchet($2$). 
+    Fréchet($\alpha = 2$). 
