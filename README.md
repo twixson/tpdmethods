@@ -533,7 +533,7 @@ estimator and then to perform a power transformation so that all
 transformed variables have the same alpha. A power transformation would
 retain scale information which would allow a covariance analogue to the
 TPDM. This is not currently implemented in the `tpdmethods` package.
-Please reach out if you feel it, or anything else, would be a usefule
+Please reach out if you feel it, or anything else, would be a useful
 addition.
 
 ### Summary
