@@ -526,9 +526,11 @@ alpha_plot <- function(data, k, ci = 0.95, num_cols_used = 50, max_cols = 100){
     ggplot2::geom_pointrange() +
     ggplot2::geom_hline(ggplot2::aes(yintercept = mean(alpha_hats)), color = 2) +
     ggplot2::annotate(geom = "text",
-                      x = 1.3,
-                      y = mean(df$alpha_hats) + 0.05,
-                      label = paste(round(mean(df$alpha_hats), 3)),
+                      x = min(df$index),
+                      y = min(df$lower),
+                      hjust = 0,
+                      vjust = 0,
+                      label = bquote(hat("\u03B1")[joint] == .(round(mean(df$alpha_hats), 3))),
                       color = 2) +
     ggplot2::labs(title = paste0(100*ci, "% confidence intervals for alpha"),
                   subtitle = paste0("(Hill estimator with k=", k, ")"),

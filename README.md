@@ -4,6 +4,7 @@
 # tpdmethods
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
 The goal of tpdmethods is to make TPD-based methods accessible to more
@@ -40,13 +41,13 @@ pak::pak("twixson/tpdmethods")
 
 ## Example 1: Time Series - Fire Weather
 
-This is a basic example which shows a simple transformed-linear extremes
-time series (TLETS) workflow. We will perform a simplified version of
-the analysis in Wixson and Cooley (2023). The scientific question is how
-much more likely is a fire season like 2020 under present climate than
-under past climate. Wixson and Cooley (2023) used Fire Weather Index
-(FWI) data to answer this question. An example script and the original
-data can be found at
+In this example we show a simple transformed-linear extremes time series
+(TLETS) workflow. We will perform a simplified version of the analysis
+in Wixson and Cooley (2023). The scientific question is how much more
+likely is a fire season like 2020 under present climate than under past
+climate. Wixson and Cooley (2023) used Fire Weather Index (FWI) data to
+answer this question. An example script and the original data can be
+found at
 <https://github.com/twixson/seasonal_wildfire_risk_attribution>. The
 data exhibited seasonality and so the authors performed a marginal
 transformation that made the assumption of tail stationarity plausible
@@ -98,11 +99,11 @@ plot(0:30, fw_tpd_present,
 ### Model Fitting
 
 After estimating the TPD we need to fit a model to the data. We will use
-the extremes analogue to the innovations algorithm to fit a
-transformed-linear moving average (TL-MA) model up to order `q = 20`.
-This function automatically checks if the inputted `tpd` object was
-generated assuming an alpha of 2. This is necessary because the
-development of the algorithm assumes $\alpha \neq 2$.
+the extremes analogue to the innovations algorithm (Mhatre and Cooley,
+2023) to fit a transformed-linear moving average (TL-MA) model up to
+order `q = 20`. This function automatically checks if the inputted `tpd`
+object was generated assuming an alpha of 2. This is necessary because
+the development of the algorithm assumes $\alpha = 2$.
 
 We assess model fit by visually comparing the plot of the fitted TPD
 function to the empirical TPD function.
@@ -110,7 +111,7 @@ function to the empirical TPD function.
 ``` r
 set.seed(1982374)
 model_coefs_present <- innovations(fw_tpd_present, max_q = 20)
-fitted_model_tpdf <- maq_tpdf(model_coefs_present[[1]][15,], max_lag = 30)
+fitted_model_tpdf <- maq_tpdf(model_coefs_present$coefs[15,], max_lag = 30)
 
 par(mar = c(4, 4, 2, 1) + 0.1)
 plot(0:30, fw_tpd_present, type = "h", ylim = c(0, 1), 
@@ -181,7 +182,7 @@ can compare to the observed RV FWI data.
 ``` r
 set.seed(2389098)
 temp_present <- gen_maq(n = 153*1000, 
-                        thetas = model_coefs_present[[1]][15,1:15]) 
+                        thetas = model_coefs_present$coefs[15,1:15]) 
 seasons_present <- 
   matrix(transform_marginal(temp_present, fix_gpd_params = TRUE, gpd_shape = 0.5), 
          ncol = 1000)
@@ -216,7 +217,7 @@ round(generated_confints, 4)
 #> upper 0.4023 0.1674 0.0682 0.0197
 ```
 
-Note the broad agreement between our data and the fitted model.
+We note broad agreement between our data and the fitted model.
 
 ### Summary
 
@@ -242,7 +243,7 @@ This brief example demonstrated a few of the key functions:
 
 ## Example 2: Principal Components Analysis - Financial Data
 
-In this second brief example we will explore the extremes analogue to
+In this second example we will explore the extremes analogue to
 principal components analysis using financial data from the Kenneth R.
 French Data Library. These data are included in the package as
 `financial_data`. The data consist of 13599 observations of losses
@@ -261,15 +262,15 @@ alpha.
 To check the tail of these data we will use the Hill estimator (Hill,
 1975). This estimator uses the largest `k` order statistics to estimate
 alpha. A standard way of choosing `k` is to look at a Hill plot which
-computes the Hill estimator across a range of values for `k` and
-choosing the largest `k` such that the estimates for all smaller values
-of `k` are relatively stable. We use the function `hill()` from the
-`evir` package on a few variable here to illustrate the method. We
-consider using up to `k = 2000` (the 0.85 quantile) as a larger `k`
-seems implausible. In addition we and add horizontal lines to the Hill
-plots as a visual aid. The first three plots include a line at the joint
-estimate and the last plot includes a second line at a more believable
-value.
+computes the Hill estimator across a range of values for `k`. Using the
+Hill plot we choose the largest `k` such that the estimates for all
+smaller values of `k` are relatively stable. We use the function
+`hill()` from the `evir` package on a few sectors here to illustrate the
+method. We consider using up to `k = 2000` (the 0.85 quantile) as a
+larger `k` seems implausible. In addition we and add horizontal lines to
+the Hill plots as a visual aid. The first three plots include a line at
+the joint estimate and the last plot includes a second line at a more
+believable value for that financial sector.
 
 ``` r
 par(mfrow = c(2,2))
@@ -292,14 +293,13 @@ par(mfrow = c(1,1))
 Most of the plots for the 30 financial sectors look similar to the two
 plots in the top row. The plot in the bottom left is hard to interpret
 as the estimates do not appear to stabilize. The plot on the bottom
-right complicates the interpretation as the estimates appear to
-stabilize but at a different value for alpha. In all four plots the
-estimates for alpha become noisy when `k` is quite small which is
-expected as the variance is greater when there are fewer observations
-used.
+right complicates the inference as the estimates appear to stabilize but
+at a different value for alpha. In all four plots the estimates for
+alpha become noisy when `k` is quite small which is expected as the
+variance is greater when there are fewer observations used.
 
-It is challenging to select a single value above which the estimates
-become stable but the horizontal line in these plots suggests that
+While selecting a single value above which the estimates become stable
+is challenging, the horizontal line in these plots suggests that using
 somewhere between 300 and 500 order statistics is reasonable. We will
 move forward with `k = 300` because of the Hill plot on the bottom left
 which suggests a smaller number is needed. Selecting `k = 300`
@@ -317,6 +317,7 @@ horizontal line at the joint estimate.
 
 ``` r
 alpha_plot(financial_data[,-1], k = 300)
+#> Warning in is.na(x): is.na() applied to non-(list or vector) of type 'language'
 ```
 
 <img src="man/figures/README-alpha_plot-1.png" width="100%" />
@@ -333,7 +334,7 @@ From here a practitioner needs to determine if they want to transform
 the margins. If the practitioner wants to transform the margins (as we
 do in the first of our two following analyses) then the assumption of a
 common alpha is unnecessary as the marginal transformation will put all
-variables on Fr'echet($\alpha = 2$) margins. The practitioner can move
+variables on Fréchet($\alpha = 2$) margins. The practitioner can move
 forward with the marginal transformation whether or not the underlying
 variables have the same alpha. If, instead, the practitioner wants to
 leave the variables on the natural margins then they must be willing to
@@ -352,7 +353,7 @@ model above some high quantile (the emperical 0.975-quantile by default)
 and uses a rank transformation (the ECDF) below that quantile. This
 piece-wise model is used to put each variable onto uniform margins which
 are then transformed with the probability integral transform to
-Fr'echet($\alpha = 2$) margins. This transformation, coded in the
+Fréchet($\alpha = 2$) margins. This transformation, coded in the
 `transform_marginal()` function, ensures a common alpha as well as a
 common scale. Since the variables now each have unit scale the
 subsequent analysis is analogous to PCA on the correlation matrix rather
@@ -498,6 +499,7 @@ with `vector_norm = TRUE`.
 ``` r
 tpdm_cov <- tpd(as.matrix(financial_data[,-1]), 
                 trans_marginal = FALSE, 
+                fix_alpha = 3.139, 
                 vector_norm = TRUE)
 #> [1] "Matrix input, we assume rows represent replicates"
 #> [1] ". . . and columns represent variables."
@@ -508,11 +510,12 @@ plot_eigen(eigen_cov$vectors, var_names = colnames(financial_data[-1]))
 <img src="man/figures/README-cov_analogue-1.png" width="100%" />
 
 Here we highlight that, just as in classical PCA, when PCA is done on
-the covariance matrix and the scales are different then one of the early
-eigenvectors has to account for that difference in scale. A primary
-difference between these two sets of eigenvectors is the weighting on
-the coal sector. The scales in the correlation-analogue are fixed at one
-which obscures the large scale in coal on the original margins.
+the covariance matrix, and the scales are different, then one of the
+early eigenvectors has to account for that difference in scale. A
+primary difference between these two sets of eigenvectors is the
+weighting on the coal sector. The scales in the correlation-analogue are
+fixed at one which obscures the large scale in coal on the original
+margins.
 
 ``` r
 # correlation analogue
