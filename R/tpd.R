@@ -521,6 +521,7 @@ alpha_plot <- function(data, k, ci = 0.95, num_cols_used = 50, max_cols = 100){
   crit_val      <- qnorm(1 - (1 - ci)/2)
   df$upper      <- df$alpha_hats + crit_val * df$ses
   df$lower      <- df$alpha_hats - crit_val * df$ses
+  joint_alpha   <- round(mean(df$alpha_hats), 3)
 
   temp_plot <- ggplot2::ggplot(df,
                                ggplot2::aes(x = index,
@@ -534,8 +535,9 @@ alpha_plot <- function(data, k, ci = 0.95, num_cols_used = 50, max_cols = 100){
                       y = min(df$lower),
                       hjust = 0,
                       vjust = 0,
-                      label = bquote(hat("\u03B1")[joint] == .(round(mean(df$alpha_hats), 3))),
-                      color = 2) +
+                      label = paste0("hat(alpha)[joint] == ", joint_alpha),
+                      color = 2,
+                      parse = TRUE) +
     ggplot2::labs(title = paste0(100*ci, "% confidence intervals for alpha"),
                   subtitle = paste0("(Hill estimator with k=", k, ")"),
                   x = "",
