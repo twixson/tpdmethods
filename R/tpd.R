@@ -134,7 +134,11 @@ tpd <- function(data,
     } else {
       stop("vector_norm = TRUE but not a matrix: we're working on it")
     }
-  } else { # Normalize pairwise instead
+  } else {       # Normalize pairwise instead
+    if((trans_marginal == FALSE) & (fix_alpha != 2)){
+      print("The pairwise estimation of the TPD when alpha is not equal to 2 is")
+      print("... not currently implemented.")
+      Stop("If alpha=2 you can override this error by setting `fix_alpha=2`.")}
     if(matrix_as_seasons == TRUE){
       if(is.matrix(data)){
         n_seasons <- dim(data)[2]
